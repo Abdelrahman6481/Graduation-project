@@ -13,7 +13,7 @@ class PreLoginPage extends StatelessWidget {
           children: [
             Image.asset(
               'assets/cic_logo.png', // تأكد من إضافة اللوجو داخل assets
-              width: 200,
+              width: 300,
             ),
             const SizedBox(height: 20),
             const Text(
@@ -50,11 +50,11 @@ class PreLoginPage extends StatelessWidget {
   Widget _buildCampusButton(BuildContext context, String text) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red,
+          backgroundColor: Color(0xFF8B0000),
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
       onPressed: () {
