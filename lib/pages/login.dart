@@ -15,74 +15,78 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFDDEED5), // لون الخلفية الأساسي
       body: Center(
-        child: Card(
-          elevation: 8, // تأثير الظل
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          color: Colors.white, // لون الكارد
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  'assets/cic_logo2.png', // تأكد من وضع الصورة في assets
-                  width: 100,
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  "Campus Portal",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+        child: Container(
+          width: 380, //  تصغير عرض الكارد
+          padding: const EdgeInsets.all(10), //  تقليل البادينج لتصغير الحجم
+          child: Card(
+            elevation: 6, //  تقليل الظل قليلاً
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            color: Colors.white, // لون الكارد
+            child: Padding(
+              padding: const EdgeInsets.all(16.0), //  تقليل التباعد الداخلي
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/cic_logo2.png',
+                    width: 150, //  تصغير حجم اللوجو
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Campus Portal",
+                    style: TextStyle(
+                      fontSize: 20, //  تقليل حجم النص قليلاً
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
-                // حقل اسم المستخدم
-                _buildTextField("User Name", Icons.person, false),
-                const SizedBox(height: 15),
+                  // حقل اسم المستخدم
+                  _buildTextField("User Name", Icons.person, false),
+                  const SizedBox(height: 20),
 
-                // حقل كلمة المرور
-                _buildTextField("Password", Icons.lock, true),
-                const SizedBox(height: 10),
+                  // حقل كلمة المرور
+                  _buildTextField("Password", Icons.lock, true),
+                  const SizedBox(height: 8),
 
-                // زر نسيان كلمة المرور
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () {
-                      // إضافة أكشن عند نسيان كلمة المرور
-                    },
-                    child: const Text(
-                      "Forget Password?",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
+                  // زر نسيان كلمة المرور
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () {
+                        // إضافة أكشن عند نسيان كلمة المرور
+                      },
+                      child: const Text(
+                        "Forget Password?",
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                // زر تسجيل الدخول
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD32F2F), // لون الزر
-                    foregroundColor: Colors.white, // لون النص
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                  // زر تسجيل الدخول
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF8B0000), // لون الزر
+                      foregroundColor: Colors.white, // لون النص
+                      padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 10), // ✅ تقليل التباعد في الزر
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
+                    onPressed: () {
+                      // الأكشن عند الضغط على تسجيل الدخول
+                    },
+                    child: const Text("Login"),
                   ),
-                  onPressed: () {
-                    // الأكشن عند الضغط على تسجيل الدخول
-                  },
-                  child: const Text("Login"),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -95,7 +99,7 @@ class _LoginPageState extends State<LoginPage> {
     return TextField(
       obscureText: isPassword ? _obscurePassword : false,
       decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: Colors.red),
+        prefixIcon: Icon(icon, color:  Color(0xFF8B0000),),
         suffixIcon: isPassword
             ? IconButton(
           icon: Icon(
@@ -114,15 +118,15 @@ class _LoginPageState extends State<LoginPage> {
         fillColor: Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Colors.red),
+          borderSide: const BorderSide(color: Color(0xFF8B0000),),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Colors.red),
+          borderSide: const BorderSide(color: Color(0xFF8B0000),),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
+          borderSide: const BorderSide(color: Color(0xFF8B0000),),
         ),
       ),
     );

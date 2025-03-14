@@ -51,11 +51,11 @@ class PreLoginPage extends StatelessWidget {
   Widget _buildCampusButton(BuildContext context, String text, Widget? page) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFD32F2F), // لون الزر
+        backgroundColor: Color(0xFF8B0000), // لون الزر
         foregroundColor: Colors.white, // لون النص
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 18),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
       onPressed: () {
@@ -66,7 +66,13 @@ class PreLoginPage extends StatelessWidget {
           );
         }
       },
-      child: Text(text),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 18, // تكبير الخط
+          fontWeight: FontWeight.bold, // جعل النص سميكًا
+        ),
+      ),
     );
   }
 }
