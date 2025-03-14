@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login.dart'; // استدعاء صفحة تسجيل الدخول
 
 class PreLoginPage extends StatelessWidget {
   const PreLoginPage({super.key});
@@ -12,8 +13,8 @@ class PreLoginPage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset(
-              'assets/cic_logo.png', // تأكد من إضافة اللوجو داخل assets
-              width: 300,
+              'assets/cic_logo.png', // تأكد من وجود الصورة في مجلد assets
+              width: 200,
             ),
             const SizedBox(height: 20),
             const Text(
@@ -36,9 +37,9 @@ class PreLoginPage extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildCampusButton(context, 'New Cairo'),
+                _buildCampusButton(context, 'New Cairo', null), // لا يقوم بفتح صفحة
                 const SizedBox(width: 20),
-                _buildCampusButton(context, 'Zayed'),
+                _buildCampusButton(context, 'Zayed', const LoginPage()), // ينقلك إلى صفحة تسجيل الدخول
               ],
             ),
           ],
@@ -47,18 +48,23 @@ class PreLoginPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCampusButton(BuildContext context, String text) {
+  Widget _buildCampusButton(BuildContext context, String text, Widget? page) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-          backgroundColor: Color(0xFF8B0000),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+        backgroundColor: const Color(0xFFD32F2F), // لون الزر
+        foregroundColor: Colors.white, // لون النص
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(10),
         ),
       ),
       onPressed: () {
-        // يمكنك تحديد الإجراء المطلوب هنا عند الضغط على الزر
+        if (page != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => page),
+          );
+        }
       },
       child: Text(text),
     );
