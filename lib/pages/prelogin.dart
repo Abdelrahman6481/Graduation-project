@@ -8,7 +8,7 @@ class PreLoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFDDEED5), // لون الخلفية
+      backgroundColor: const Color(0xFFD7E9D3), // لون الخلفية
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

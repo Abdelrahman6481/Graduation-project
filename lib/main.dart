@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // مكتبة التحكم في النظام
 import 'pages/prelogin.dart';
+import 'pages/splash_screen.dart'; // استدعاء شاشة السبللاش
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized(); // تهيئة التطبيق
+  WidgetsFlutterBinding.ensureInitialized();
 
+  // إخفاء شريط الحالة (Status Bar)
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent, // جعل شريط الحالة شفاف
-    statusBarIconBrightness: Brightness.dark, // يجعل الأيقونات سوداء (حسب لون الخلفية)
+    statusBarIconBrightness: Brightness.dark, // لون الأيقونات
   ));
 
   runApp(const MyApp());
@@ -19,8 +21,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: PreLoginPage(), // تشغيل الصفحة الرئيسية
+      debugShowCheckedModeBanner: false, // إخفاء شريط التصحيح
+      home: SplashScreen(), // تشغيل شاشة السبللاش أولاً
     );
   }
 }
