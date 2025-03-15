@@ -1,3 +1,4 @@
+import 'package:cic_hub/pages/home.dart';
 import 'package:flutter/material.dart';
 import 'login.dart'; // استدعاء صفحة تسجيل الدخول
 
@@ -37,7 +38,7 @@ class PreLoginPage extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildCampusButton(context, 'New Cairo', null), // لا يقوم بفتح صفحة
+                _buildCampusButton(context, 'New Cairo', const HomePage()), // لا يقوم بفتح صفحة
                 const SizedBox(width: 20),
                 _buildCampusButton(context, 'Zayed', const LoginPage()), // ينقلك إلى صفحة تسجيل الدخول
               ],
