@@ -33,47 +33,44 @@ class SplashScreen extends StatefulWidget {
   _SplashScreenState createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+  late AnimationController _logoController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _shakeAnimation;
+  late Animation<double> _textFadeAnimation;
+
+  bool showText = false;
 
   @override
   void initState() {
     super.initState();
 
-    _controller = AnimationController(
+    _logoController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     );
 
-    // تأثير الظهور التدريجي
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    // تأثير الظهور التدريجي للوجو مع التكبير قليلاً
+    _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
     );
 
-    // تأثير التكبير التدريجي
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
-
-    // تأثير الانزلاق للأعلى
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-
-    // تأثير الاهتزاز في النهاية
-    _shakeAnimation = Tween<double>(begin: 0, end: 10).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
     );
 
     // تشغيل الأنيميشن
-    _controller.forward();
+    _logoController.forward();
 
-    // الانتقال إلى الصفحة الرئيسية بعد 3 ثوانٍ
-    Timer(const Duration(seconds: 3), () {
+    // بعد انتهاء الأنيميشن، إظهار النص بعد تأخير بسيط
+    Future.delayed(const Duration(seconds: 2), () {
+      setState(() {
+        showText = true;
+      });
+    });
+
+    // الانتقال إلى الصفحة الرئيسية بعد 4.5 ثوانٍ
+    Timer(const Duration(milliseconds: 4500), () {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const PreLoginPage()),
@@ -84,27 +81,27 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // مثل شاشة Netflix السوداء
+      backgroundColor: Colors.white,
       body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: AnimatedBuilder(
-              animation: _shakeAnimation,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(_shakeAnimation.value, 0), // حركة اهتزاز خفيفة
-                  child: Transform.scale(
-                    scale: _scaleAnimation.value,
-                    child: child,
-                  ),
-                );
-              },
-              child: Image.asset(
-                'assets/cic_logo.png', // اللوجو المتحرك
-                width: 200,
-              ),
+        child: showText
+            ? FadeTransition(
+          opacity: AlwaysStoppedAnimation(1.0),
+          child: Text(
+            'CIC-Hub',
+            style: TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
+              color: Colors.red.shade900,
+            ),
+          ),
+        )
+            : ScaleTransition(
+          scale: _scaleAnimation,
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Image.asset(
+              'assets/cic_logo2.png',
+              width: 200,
             ),
           ),
         ),
@@ -114,7 +111,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    _controller.dispose();
+    _logoController.dispose();
     super.dispose();
   }
 }
