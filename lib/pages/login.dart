@@ -75,7 +75,10 @@ class _LoginPageState extends State<LoginPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFF8B0000), // لون الزر
                       foregroundColor: Colors.white, // لون النص
-                      padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 10), // ✅ تقليل التباعد في الزر
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 35,
+                        vertical: 10,
+                      ), // ✅ تقليل التباعد في الزر
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -99,34 +102,35 @@ class _LoginPageState extends State<LoginPage> {
     return TextField(
       obscureText: isPassword ? _obscurePassword : false,
       decoration: InputDecoration(
-        prefixIcon: Icon(icon, color:  Color(0xFF8B0000),),
-        suffixIcon: isPassword
-            ? IconButton(
-          icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
-          ),
-          onPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-          },
-        )
-            : null,
+        prefixIcon: Icon(icon, color: Color(0xFF8B0000)),
+        suffixIcon:
+            isPassword
+                ? IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                )
+                : null,
         hintText: hintText,
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0xFF8B0000),),
+          borderSide: const BorderSide(color: Color(0xFF8B0000)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0xFF8B0000),),
+          borderSide: const BorderSide(color: Color(0xFF8B0000)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0xFF8B0000),),
+          borderSide: const BorderSide(color: Color(0xFF8B0000)),
         ),
       ),
     );

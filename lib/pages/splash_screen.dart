@@ -6,10 +6,12 @@ import 'prelogin.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
 
   runApp(const MyApp());
 }
@@ -33,11 +35,11 @@ class SplashScreen extends StatefulWidget {
   _SplashScreenState createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
   late AnimationController _logoController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _textFadeAnimation;
 
   bool showText = false;
 
@@ -51,9 +53,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     );
 
     // تأثير الظهور التدريجي للوجو مع التكبير قليلاً
-    _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeIn));
 
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
       CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
@@ -63,10 +66,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _logoController.forward();
 
     // بعد انتهاء الأنيميشن، إظهار النص بعد تأخير بسيط
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() {
-        showText = true;
-      });
+    _logoController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          showText = true;
+        });
+      }
     });
 
     // الانتقال إلى الصفحة الرئيسية بعد 4.5 ثوانٍ
@@ -83,28 +88,26 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: showText
-            ? FadeTransition(
-          opacity: AlwaysStoppedAnimation(1.0),
-          child: Text(
-            'CIC-Hub',
-            style: TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.bold,
-              color: Colors.red.shade900,
-            ),
-          ),
-        )
-            : ScaleTransition(
-          scale: _scaleAnimation,
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Image.asset(
-              'assets/cic_logo2.png',
-              width: 200,
-            ),
-          ),
-        ),
+        child:
+            showText
+                ? FadeTransition(
+                  opacity: AlwaysStoppedAnimation(1.0),
+                  child: Text(
+                    'CIC-Hub',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade900,
+                    ),
+                  ),
+                )
+                : ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Image.asset('assets/cic_logo2.png', width: 200),
+                  ),
+                ),
       ),
     );
   }

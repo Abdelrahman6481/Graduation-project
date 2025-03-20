@@ -26,9 +26,7 @@ class _HomePageState extends State<HomePage> {
         elevation: 0,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('assets/cic_logo.png', height: 55),
-          ],
+          children: [Image.asset('assets/cic_logo.png', height: 55)],
         ),
         actions: [
           IconButton(
@@ -51,8 +49,14 @@ class _HomePageState extends State<HomePage> {
                     backgroundImage: AssetImage('assets/profile.png'),
                   ),
                   SizedBox(height: 20),
-                  Text('Abdelrahman Elasaeed', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text('202106409', style: TextStyle(color: Colors.white70)),
+                  Text(
+                    'Abdelrahman Elasaeed',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -100,6 +104,8 @@ class _HomePageState extends State<HomePage> {
 }
 
 class HomeContent extends StatelessWidget {
+  const HomeContent({super.key});
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -124,18 +130,32 @@ class HomeContent extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Hi - Abdelrahman ',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    Text(
+                      'Hi - Abdelrahman ',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    Text('202106409', style: TextStyle(color: Colors.white, fontSize: 16)),
-                    Text('Level 4', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    Text(
+                      '202106409',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    Text(
+                      'Level 4',
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
           SizedBox(height: 20),
-          Text('Announcements', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(
+            'Announcements',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
@@ -155,7 +175,10 @@ class HomeContent extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {},
-                    child: Text("View All", style: TextStyle(color: Colors.red.shade900)),
+                    child: Text(
+                      "View All",
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
                   ),
                 ),
               ],
@@ -197,7 +220,11 @@ class HomeContent extends StatelessWidget {
               children: [
                 Icon(icon, size: 30, color: Colors.red.shade900),
                 SizedBox(height: 10),
-                Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),
