@@ -41,4 +41,3 @@
 - **Interactive Prototype** enabling seamless navigation between pages.
 - **Modern, simple, and responsive design** across all devices.
 - **User experience optimization** for smooth and intuitive browsing.
- aaaaaaaaaaaaaa
