@@ -30,7 +30,7 @@ class ProfilePage extends StatelessWidget {
                 SizedBox(height: 10),
                 CircleAvatar(
                   radius: 50,
-                  backgroundImage: AssetImage('assets/profile.png'),
+                  backgroundImage: AssetImage('assets/cic_logo2.png'),
                 ),
                 SizedBox(height: 10),
                 Text(
