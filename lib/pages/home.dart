@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'profile.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _HomePageState createState() => _HomePageState();
 }
 
@@ -15,7 +17,7 @@ class _HomePageState extends State<HomePage> {
     HomeContent(),
     Center(child: Text('Schedule Page', style: TextStyle(fontSize: 24))),
     Center(child: Text('Restrictions Page', style: TextStyle(fontSize: 24))),
-    Center(child: Text('Profile Page', style: TextStyle(fontSize: 24))),
+    ProfilePage(), // استبدل النص البسيط بصفحة Profile
   ];
 
   @override
@@ -97,7 +99,12 @@ class _HomePageState extends State<HomePage> {
       leading: Icon(icon, color: Colors.black),
       title: Text(title),
       onTap: () {
-        Navigator.pop(context);
+        Navigator.pop(context); // إغلاق الدراور
+        if (title == 'Profile') {
+          setState(() {
+            _selectedIndex = 3; // تغيير الindex إلى موقع صفحة Profile
+          });
+        }
       },
     );
   }
