@@ -62,12 +62,12 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            _buildDrawerItem(Icons.home, 'Home', context),
-            _buildDrawerItem(Icons.person, 'Profile', context),
-            _buildDrawerItem(Icons.school, 'Courses', context),
-            _buildDrawerItem(Icons.calendar_today, 'Timetable', context),
-            _buildDrawerItem(Icons.credit_card, 'Fees Payment', context),
-            _buildDrawerItem(Icons.logout, 'Logout', context),
+            _buildDrawerItem(Icons.home, 'Home', context,0),
+            _buildDrawerItem(Icons.person, 'Profile', context,3),
+            _buildDrawerItem(Icons.school, 'Courses', context,null),
+            _buildDrawerItem(Icons.calendar_today, 'Timetable', context,null),
+            _buildDrawerItem(Icons.credit_card, 'Fees Payment', context,null),
+            _buildDrawerItem(Icons.logout, 'Logout', context,null),
           ],
         ),
       ),
@@ -94,15 +94,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildDrawerItem(IconData icon, String title, BuildContext context) {
+  Widget _buildDrawerItem(IconData icon, String title, BuildContext context, int? index) {
     return ListTile(
       leading: Icon(icon, color: Colors.black),
       title: Text(title),
       onTap: () {
-        Navigator.pop(context); // إغلاق الدراور
-        if (title == 'Profile') {
+        Navigator.pop(context);
+        if (index != null) {
           setState(() {
-            _selectedIndex = 3; // تغيير الindex إلى موقع صفحة Profile
+            _selectedIndex = index;
           });
         }
       },
@@ -131,7 +131,7 @@ class HomeContent extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 40,
-                  backgroundImage: AssetImage('assets/cic_logo2.png'),
+                  backgroundImage: AssetImage('assets/profile.png'),
                 ),
                 SizedBox(width: 15),
                 Column(
