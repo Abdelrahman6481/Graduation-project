@@ -6,6 +6,7 @@ import 'payment.dart';
 import 'attendance.dart';
 import 'results.dart';
 import 'online_services.dart';
+import 'announcements.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -115,7 +116,7 @@ class _HomePageState extends State<HomePage> {
         if (title == 'Home') {
           setState(() {
             _selectedIndex =
-            2; // تحديث index عند الضغط على Home في القائمة الجانبية
+                2; // تحديث index عند الضغط على Home في القائمة الجانبية
           });
         } else if (title == 'Profile') {
           setState(() {
@@ -239,28 +240,28 @@ class HomeContent extends StatelessWidget {
                   Icons.calendar_today,
                   Colors.blue,
                   context,
-                    SchedulePage()
+                  SchedulePage(),
                 ),
                 _buildQuickActionCard(
                   'Attendance',
                   Icons.check_circle,
                   Colors.green,
                   context,
-                    AttendancePage()
+                  AttendancePage(),
                 ),
                 _buildQuickActionCard(
                   'Payment',
                   Icons.payment,
                   Colors.orange,
                   context,
-                    PaymentPage()
+                  PaymentPage(),
                 ),
                 _buildQuickActionCard(
                   'Results',
                   Icons.grade,
                   Colors.purple,
                   context,
-                    ResultsPage()
+                  ResultsPage(),
                 ),
               ],
             ),
@@ -280,7 +281,14 @@ class HomeContent extends StatelessWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AnnouncementsPage(),
+                      ),
+                    );
+                  },
                   child: Text(
                     'View All',
                     style: TextStyle(color: Colors.red.shade900),
@@ -307,12 +315,12 @@ class HomeContent extends StatelessWidget {
   }
 
   Widget _buildQuickActionCard(
-      String title,
-      IconData icon,
-      Color color,
-      BuildContext context,
-      Widget targetPage, // إضافة صفحة الهدف
-      ) {
+    String title,
+    IconData icon,
+    Color color,
+    BuildContext context,
+    Widget targetPage, // إضافة صفحة الهدف
+  ) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -345,7 +353,6 @@ class HomeContent extends StatelessWidget {
       ),
     );
   }
-
 
   Widget _buildAnnouncementCard(String title, String content, String time) {
     return Card(
