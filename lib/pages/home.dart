@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'profile.dart';
+import 'schedule.dart';
+import 'payment.dart';
+import 'attendance.dart';
+import 'results.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,7 +19,7 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     Center(child: Text('Dashboard Page', style: TextStyle(fontSize: 24))),
-    Center(child: Text('Schedule Page', style: TextStyle(fontSize: 24))),
+    SchedulePage(),
     HomeContent(), // وضع HomeContent في الموقع الثالث (index: 2)
     Center(child: Text('Courses Page', style: TextStyle(fontSize: 24))),
     ProfilePage(),
@@ -110,7 +114,7 @@ class _HomePageState extends State<HomePage> {
         if (title == 'Home') {
           setState(() {
             _selectedIndex =
-                2; // تحديث index عند الضغط على Home في القائمة الجانبية
+            2; // تحديث index عند الضغط على Home في القائمة الجانبية
           });
         } else if (title == 'Profile') {
           setState(() {
@@ -234,24 +238,28 @@ class HomeContent extends StatelessWidget {
                   Icons.calendar_today,
                   Colors.blue,
                   context,
+                    SchedulePage()
                 ),
                 _buildQuickActionCard(
                   'Attendance',
                   Icons.check_circle,
                   Colors.green,
                   context,
+                    AttendancePage()
                 ),
                 _buildQuickActionCard(
-                  'Assignments',
-                  Icons.assignment,
+                  'Payment',
+                  Icons.payment,
                   Colors.orange,
                   context,
+                    PaymentPage()
                 ),
                 _buildQuickActionCard(
                   'Results',
                   Icons.grade,
                   Colors.purple,
                   context,
+                    ResultsPage()
                 ),
               ],
             ),
@@ -298,16 +306,22 @@ class HomeContent extends StatelessWidget {
   }
 
   Widget _buildQuickActionCard(
-    String title,
-    IconData icon,
-    Color color,
-    BuildContext context,
-  ) {
+      String title,
+      IconData icon,
+      Color color,
+      BuildContext context,
+      Widget targetPage, // إضافة صفحة الهدف
+      ) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: InkWell(
-        onTap: () {},
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => targetPage),
+          );
+        },
         borderRadius: BorderRadius.circular(15),
         child: Container(
           padding: EdgeInsets.all(15),
@@ -330,6 +344,7 @@ class HomeContent extends StatelessWidget {
       ),
     );
   }
+
 
   Widget _buildAnnouncementCard(String title, String content, String time) {
     return Card(
