@@ -5,6 +5,7 @@ import 'schedule.dart';
 import 'payment.dart';
 import 'attendance.dart';
 import 'results.dart';
+import 'online_services.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,7 +20,7 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     Center(child: Text('Dashboard Page', style: TextStyle(fontSize: 24))),
-    SchedulePage(),
+    OnlineServicesPage(),
     HomeContent(), // وضع HomeContent في الموقع الثالث (index: 2)
     Center(child: Text('Courses Page', style: TextStyle(fontSize: 24))),
     ProfilePage(),
