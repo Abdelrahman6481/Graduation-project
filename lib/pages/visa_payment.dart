@@ -16,7 +16,6 @@ class _VisaPaymentPageState extends State<VisaPaymentPage> {
   final _expiryController = TextEditingController();
   final _cvvController = TextEditingController();
   final _nameController = TextEditingController();
-  bool _isLoading = false;
 
   // Card type detection
   CardType _cardType = CardType.unknown;

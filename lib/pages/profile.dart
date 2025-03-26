@@ -145,7 +145,7 @@ class ProfilePage extends StatelessWidget {
                       'Contact Information',
                       [
                         {'Email': 'abdelrahman_m16481@cic-cairo.com'},
-                        {'Phone': '+20 123 456 7890'},
+                        {'Phone': '+20 1060756540'},
                         {'Campus': 'New Cairo'},
                       ],
                     ),

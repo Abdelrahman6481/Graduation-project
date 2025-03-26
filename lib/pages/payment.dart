@@ -335,28 +335,6 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  Widget _buildPaymentButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.shade900,
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-        onPressed: () {
-          // Implement payment action
-        },
-        child: const Text(
-          'Continue to Payment',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-
   void _showCashPaymentInfo(BuildContext context) {
     showDialog(
       context: context,

@@ -186,7 +186,7 @@ class _AttendancePageState extends State<AttendancePage> {
 
   Widget _buildAttendanceChart() {
     final mainGreen = const Color(0xFFDDEED5); // الأخضر الفاتح الأساسي
-    final darkRed = const Color(0xFF8B0000); // الأحمر الداكن الأساسي
+    // الأحمر الداكن الأساسي
 
     return FadeInDown(
       delay: const Duration(milliseconds: 300),
