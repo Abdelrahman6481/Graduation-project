@@ -1,3 +1,4 @@
+import 'package:cic_hub/pages/dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'profile.dart';
@@ -20,11 +21,11 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 2; // تغيير القيمة الابتدائية إلى 2 (موقع زر Home)
 
   final List<Widget> _pages = [
-    Center(child: Text('Dashboard Page', style: TextStyle(fontSize: 24))),
-    OnlineServicesPage(),
-    HomeContent(), // وضع HomeContent في الموقع الثالث (index: 2)
-    Center(child: Text('Courses Page', style: TextStyle(fontSize: 24))),
-    ProfilePage(),
+    const DashboardPage(), // استبدال النص السابق بصفحة Dashboard
+    const OnlineServicesPage(),
+    const HomeContent(),
+    const Center(child: Text('Courses Page', style: TextStyle(fontSize: 24))),
+    const ProfilePage(),
   ];
 
   @override
