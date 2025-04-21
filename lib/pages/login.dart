@@ -18,14 +18,14 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // تأكيد أن الخلفية بيضاء
+      backgroundColor: Colors.white, //? تأكيد أن الخلفية بيضاء
       body: Stack(
         children: [
           // Background Design
           Container(
             width: double.infinity,
             height: double.infinity,
-            color: Colors.white, // تأكيد أن خلفية الـ Container بيضاء
+            color: Colors.white, //? تأكيد أن خلفية الـ Container بيضاء
           ),
           Positioned(
             top: -100,
@@ -177,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
                     // Login Button
                     Container(
                       width: double.infinity,
-                      height: 60, // ارتفاع ثابت للزر
+                      height: 60, //? ارتفاع ثابت للزر
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [Colors.red.shade900, Colors.red.shade800],
@@ -212,7 +212,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: const Text(
                           "Sign In",
                           style: TextStyle(
-                            color: Colors.white, // تغيير لون النص إلى الأبيض
+                            color: Colors.white, //? تغيير لون النص إلى الأبيض
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1,

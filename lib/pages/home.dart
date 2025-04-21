@@ -1,6 +1,7 @@
 import 'package:cic_hub/pages/dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'course_registration.dart';
 import 'profile.dart';
 import 'schedule.dart';
 import 'payment.dart';
@@ -24,7 +25,7 @@ class _HomePageState extends State<HomePage> {
     const DashboardPage(), // استبدال النص السابق بصفحة Dashboard
     const OnlineServicesPage(),
     const HomeContent(),
-    const Center(child: Text('Courses Page', style: TextStyle(fontSize: 24))),
+    const CourseRegistration(), // تغيير من النص السابق إلى صفحة تسجيل المواد
     const ProfilePage(),
   ];
 
@@ -116,12 +117,15 @@ class _HomePageState extends State<HomePage> {
         Navigator.pop(context);
         if (title == 'Home') {
           setState(() {
-            _selectedIndex =
-                2; // تحديث index عند الضغط على Home في القائمة الجانبية
+            _selectedIndex = 2;
           });
         } else if (title == 'Profile') {
           setState(() {
-            _selectedIndex = 4; // تحديث index عند الضغط على Profile
+            _selectedIndex = 4;
+          });
+        } else if (title == 'Courses') {
+          setState(() {
+            _selectedIndex = 3;
           });
         }
       },
