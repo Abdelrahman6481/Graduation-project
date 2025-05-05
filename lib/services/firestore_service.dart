@@ -930,6 +930,36 @@ class FirestoreService {
     }
   }
 
+  // Update student phone and password
+  Future<void> updateStudentPhoneAndPassword({
+    required dynamic studentId,
+    required String phone,
+    required String password,
+  }) async {
+    try {
+      final docId = _validateAndConvertId(studentId);
+
+      // Check if student exists
+      final studentDoc =
+          await _firestore.collection('students').doc(docId).get();
+      if (!studentDoc.exists) {
+        throw Exception('Student with ID $studentId does not exist');
+      }
+
+      // Update only phone and password fields
+      await _firestore.collection('students').doc(docId).update({
+        'phone': phone,
+        'password': password,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
+
+      print('Phone and password updated for student $studentId');
+    } catch (e) {
+      print('Error updating student phone and password: $e');
+      rethrow;
+    }
+  }
+
   // Instructor Operations
   Future<void> createInstructor(Instructor instructor) async {
     try {

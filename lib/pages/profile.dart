@@ -1,28 +1,178 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import '../services/firestore_service.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   final Map<String, dynamic>? studentData;
 
   const ProfilePage({super.key, this.studentData});
 
   @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final FirestoreService _firestoreService = FirestoreService();
+  bool _isLoading = false;
+
+  // Function to show edit dialog
+  void _showEditDialog(BuildContext context, String phone) {
+    final _phoneController = TextEditingController(text: phone);
+    final _passwordController = TextEditingController();
+    final _confirmPasswordController = TextEditingController();
+    String _completePhoneNumber = phone;
+    bool _isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Edit Personal Information'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Phone Field
+                    IntlPhoneField(
+                      decoration: InputDecoration(
+                        labelText: 'Phone Number',
+                        border: OutlineInputBorder(),
+                      ),
+                      initialValue: phone,
+                      initialCountryCode: 'EG',
+                      onChanged: (phoneNumber) {
+                        _completePhoneNumber = phoneNumber.completeNumber;
+                      },
+                    ),
+                    SizedBox(height: 16),
+
+                    // Password Field
+                    TextField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: 'New Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                    ),
+                    SizedBox(height: 16),
+
+                    // Confirm Password Field
+                    TextField(
+                      controller: _confirmPasswordController,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                _isLoading
+                    ? CircularProgressIndicator()
+                    : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade900,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () async {
+                        // Validate input
+                        if (_passwordController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Please enter a password')),
+                          );
+                          return;
+                        }
+
+                        if (_passwordController.text.length < 6) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Password must be at least 6 characters',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (_passwordController.text !=
+                            _confirmPasswordController.text) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Passwords do not match')),
+                          );
+                          return;
+                        }
+
+                        // Update data
+                        setState(() {
+                          _isLoading = true;
+                        });
+
+                        try {
+                          await _firestoreService.updateStudentPhoneAndPassword(
+                            studentId: widget.studentData!['id'],
+                            phone: _completePhoneNumber,
+                            password: _passwordController.text,
+                          );
+
+                          if (!context.mounted) return;
+
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Information updated successfully'),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                        } finally {
+                          if (context.mounted) {
+                            setState(() {
+                              _isLoading = false;
+                            });
+                          }
+                        }
+                      },
+                      child: Text('Save'),
+                    ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Default values if no data is provided
-    final String name = studentData?['name'] ?? 'Student Name';
-    final String major = studentData?['major'] ?? 'Computer Science';
-    final String email = studentData?['email'] ?? 'student@example.com';
-    final String phone = studentData?['phone'] ?? 'Not provided';
-    final String address = studentData?['address'] ?? 'Not provided';
-    final String college = studentData?['collegeName'] ?? 'CIC';
-    final String id = studentData?['id']?.toString() ?? 'Not assigned';
-    final int level = studentData?['level'] ?? 1;
-    final int credits = studentData?['credits'] ?? 0;
+    final String name = widget.studentData?['name'] ?? 'Student Name';
+    final String major = widget.studentData?['major'] ?? 'Computer Science';
+    final String email = widget.studentData?['email'] ?? 'student@example.com';
+    final String phone = widget.studentData?['phone'] ?? 'Not provided';
+    final String address = widget.studentData?['address'] ?? 'Not provided';
+    final String college = widget.studentData?['collegeName'] ?? 'CIC';
+    final String id = widget.studentData?['id']?.toString() ?? 'Not assigned';
+    final int level = widget.studentData?['level'] ?? 1;
+    final int credits = widget.studentData?['credits'] ?? 0;
     final double gpa =
-        studentData?['gpa'] != null
-            ? (studentData!['gpa'] is int
-                ? (studentData!['gpa'] as int).toDouble()
-                : studentData!['gpa'] as double)
+        widget.studentData?['gpa'] != null
+            ? (widget.studentData!['gpa'] is int
+                ? (widget.studentData!['gpa'] as int).toDouble()
+                : widget.studentData!['gpa'] as double)
             : 0.0;
 
     return Scaffold(
@@ -36,10 +186,9 @@ class ProfilePage extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.settings, color: Colors.red.shade900),
-            onPressed: () {
-              // Implement settings action
-            },
+            icon: Icon(Icons.edit, color: Colors.red.shade900),
+            onPressed: () => _showEditDialog(context, phone),
+            tooltip: 'Edit Personal Information',
           ),
         ],
       ),
@@ -159,13 +308,36 @@ class ProfilePage extends StatelessWidget {
                   ),
                   SizedBox(height: 20),
                   FadeInRight(
-                    child: _buildInfoCard(
-                      Icons.location_on,
-                      'Contact Information',
-                      [
-                        {'Email': email},
-                        {'Phone': phone},
-                        {'Address': address},
+                    child: Stack(
+                      children: [
+                        _buildInfoCard(
+                          Icons.location_on,
+                          'Contact Information',
+                          [
+                            {'Email': email},
+                            {'Phone': phone},
+                            {'Address': address},
+                          ],
+                        ),
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: InkWell(
+                            onTap: () => _showEditDialog(context, phone),
+                            child: Container(
+                              padding: EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade900,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.edit,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
