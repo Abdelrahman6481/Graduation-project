@@ -618,7 +618,7 @@ class _AdminHomePageState extends State<AdminHomePage>
             onPressed: () {
               Navigator.of(context).pushReplacementNamed('/prelogin');
             },
-            tooltip: 'Logout',
+            tooltip: 'Logout from admin account',
           ),
         ],
         bottom: TabBar(
