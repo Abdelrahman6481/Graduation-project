@@ -2,10 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+  final Map<String, dynamic>? studentData;
+
+  const ProfilePage({super.key, this.studentData});
 
   @override
   Widget build(BuildContext context) {
+    // Default values if no data is provided
+    final String name = studentData?['name'] ?? 'Student Name';
+    final String major = studentData?['major'] ?? 'Computer Science';
+    final String email = studentData?['email'] ?? 'student@example.com';
+    final String phone = studentData?['phone'] ?? 'Not provided';
+    final String address = studentData?['address'] ?? 'Not provided';
+    final String college = studentData?['collegeName'] ?? 'CIC';
+    final String id = studentData?['id']?.toString() ?? 'Not assigned';
+    final int level = studentData?['level'] ?? 1;
+    final int credits = studentData?['credits'] ?? 0;
+    final double gpa =
+        studentData?['gpa'] != null
+            ? (studentData!['gpa'] is int
+                ? (studentData!['gpa'] as int).toDouble()
+                : studentData!['gpa'] as double)
+            : 0.0;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -88,7 +107,7 @@ class ProfilePage extends StatelessWidget {
                     ),
                     SizedBox(height: 20),
                     Text(
-                      'Abdelrahman Elasaeed',
+                      name,
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -96,18 +115,18 @@ class ProfilePage extends StatelessWidget {
                     ),
                     SizedBox(height: 5),
                     Text(
-                      'Software Engineering Student',
+                      '$major Student',
                       style: TextStyle(color: Colors.grey[600], fontSize: 16),
                     ),
                     SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildStatusCard('GPA', '3.8'),
+                        _buildStatusCard('GPA', gpa.toStringAsFixed(2)),
                         SizedBox(width: 20),
-                        _buildStatusCard('Level', '300'),
+                        _buildStatusCard('Level', level.toString()),
                         SizedBox(width: 20),
-                        _buildStatusCard('Credits', '75'),
+                        _buildStatusCard('Credits', credits.toString()),
                       ],
                     ),
                   ],
@@ -132,9 +151,9 @@ class ProfilePage extends StatelessWidget {
                       Icons.school,
                       'Academic Information',
                       [
-                        {'College': 'Computer Science'},
-                        {'Major': 'Software Engineering'},
-                        {'Student ID': '16481'},
+                        {'College': college},
+                        {'Major': major},
+                        {'Student ID': id},
                       ],
                     ),
                   ),
@@ -144,19 +163,23 @@ class ProfilePage extends StatelessWidget {
                       Icons.location_on,
                       'Contact Information',
                       [
-                        {'Email': 'abdelrahman_m16481@cic-cairo.com'},
-                        {'Phone': '+20 1060756540'},
-                        {'Campus': 'New Cairo'},
+                        {'Email': email},
+                        {'Phone': phone},
+                        {'Address': address},
                       ],
                     ),
                   ),
                   SizedBox(height: 20),
                   FadeInLeft(
-                    child: _buildInfoCard(Icons.security, 'Security', [
-                      {'Last Login': 'Today, 10:30 AM'},
-                      {'Password': '••••••••'},
-                      {'Two-Factor': 'Enabled'},
-                    ]),
+                    child: _buildInfoCard(
+                      Icons.school_outlined,
+                      'Academic Status',
+                      [
+                        {'Current Level': 'Level $level'},
+                        {'Total Credits': '$credits Credits'},
+                        {'Current GPA': gpa.toStringAsFixed(2)},
+                      ],
+                    ),
                   ),
                 ],
               ),

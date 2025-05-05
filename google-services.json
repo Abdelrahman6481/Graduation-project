@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "98383695536",
+    "project_id": "new-portal-666a3",
+    "storage_bucket": "new-portal-666a3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:98383695536:android:2ccabd1744701fb1d9b575",
+        "android_client_info": {
+          "package_name": "com.example.cic_hub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGnSkPnxUTjP6D1Xf40flmGhI0nOqwxAs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

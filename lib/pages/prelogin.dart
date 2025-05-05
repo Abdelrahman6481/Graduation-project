@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cic_hub/pages/home.dart';
 import 'login.dart';
+import 'instructor_login.dart';
 
 class PreLoginPage extends StatelessWidget {
   const PreLoginPage({super.key});
@@ -166,7 +167,11 @@ class PreLoginPage extends StatelessWidget {
   ) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => page));
+        if (campusName == 'New Cairo') {
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -205,6 +210,26 @@ class PreLoginPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLoginButton(BuildContext context) {
+    return SizedBox(
+      height: 60,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.pushNamed(context, '/login');
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red.shade900,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: const Icon(Icons.login),
+        label: const Text('Login to System', style: TextStyle(fontSize: 18)),
       ),
     );
   }

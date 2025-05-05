@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AnnouncementsPage extends StatefulWidget {
   const AnnouncementsPage({super.key});
@@ -15,38 +16,69 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
   String _selectedFilter = 'All';
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
+  bool _isLoading = true;
+  List<Announcement> _announcements = [];
 
-  final List<Announcement> _announcements = [
-    Announcement(
-      title: 'امتحان منتصف الفصل الدراسي',
-      content:
-          'سيتم عقد امتحان منتصف الفصل الدراسي لمادة البرمجة يوم الأحد القادم في تمام الساعة العاشرة صباح في قاعة 301. يرجى من جميع الطلاب الحضور قبل موعد الامتحان بنصف ساعة.',
-      date: DateTime.now().subtract(const Duration(hours: 2)),
-      category: 'Exams',
-      isUrgent: true,
-    ),
-    Announcement(
-      title: 'موعد تسليم المشروع النهائي',
-      content:
-          'نود تذكير جميع الطلاب بأن آخر موعد لتسليم المشروع النهائي لمادة هندسة البرمجيات هو يوم الخميس القادم. يرجى الالتزام بالموعد المحدد وتسليم جميع المتطلبات المطلوبة.',
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      category: 'Projects',
-      isUrgent: false,
-    ),
-    Announcement(
-      title: 'ورشة عمل تطوير الويب',
-      content:
-          'سيتم عقد ورشة عمل حول تطوير تطبيقات الويب باستخدام React.js يوم السبت القادم. الورشة مجانية لجميع طلاب كلية علوم الحاسب.',
-      date: DateTime.now().subtract(const Duration(days: 2)),
-      category: 'Events',
-      isUrgent: false,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadAnnouncements();
+  }
 
-  List<String> get _categories => [
-    'All',
-    ..._announcements.map((e) => e.category).toSet(),
-  ];
+  Future<void> _loadAnnouncements() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final QuerySnapshot snapshot =
+          await FirebaseFirestore.instance
+              .collection('announcements')
+              .orderBy('date', descending: true)
+              .get();
+
+      final List<Announcement> loadedAnnouncements = [];
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+
+        // Convert Timestamp to DateTime
+        final date =
+            data['date'] is Timestamp
+                ? (data['date'] as Timestamp).toDate()
+                : DateTime.now();
+
+        loadedAnnouncements.add(
+          Announcement(
+            id: doc.id,
+            title: data['title'] ?? 'Untitled',
+            content: data['content'] ?? '',
+            date: date,
+            category: data['category'] ?? 'General',
+            isUrgent: data['isUrgent'] ?? false,
+          ),
+        );
+      }
+
+      setState(() {
+        _announcements = loadedAnnouncements;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading announcements: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<String> get _categories {
+    final Set<String> categories = {'All'};
+    for (var announcement in _announcements) {
+      categories.add(announcement.category);
+    }
+    return categories.toList();
+  }
 
   List<Announcement> get _filteredAnnouncements {
     return _announcements.where((announcement) {
@@ -75,19 +107,23 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
           SliverToBoxAdapter(
             child: Column(children: [_buildSearchBar(), _buildFilterChips()]),
           ),
-          _buildAnnouncementsList(),
+          _isLoading
+              ? SliverFillRemaining(
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.red.shade900),
+                ),
+              )
+              : _buildAnnouncementsList(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // Add functionality to create new announcement (for admins)
+          // Navigate to admin panel for announcement creation
+          Navigator.pop(context);
         },
         backgroundColor: Colors.red.shade900,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'New Announcement',
-          style: TextStyle(color: Colors.white),
-        ),
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        label: const Text('Back', style: TextStyle(color: Colors.white)),
       ),
     );
   }
@@ -289,12 +325,34 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
       padding: const EdgeInsets.all(16),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
-          final announcement = _filteredAnnouncements[index];
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: OutlinedButton(
+                onPressed: _loadAnnouncements,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red.shade900,
+                  side: BorderSide(color: Colors.red.shade900),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.refresh),
+                    SizedBox(width: 8),
+                    Text('Refresh Announcements'),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final announcement = _filteredAnnouncements[index - 1];
           return FadeInUp(
             duration: Duration(milliseconds: 300 + (index * 100)),
             child: _buildAnnouncementCard(announcement),
           );
-        }, childCount: _filteredAnnouncements.length),
+        }, childCount: _filteredAnnouncements.length + 1),
       ),
     );
   }
@@ -303,95 +361,78 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () => _showAnnouncementDetails(announcement),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border:
-                announcement.isUrgent
-                    ? Border.all(color: Colors.red.shade200, width: 1.5)
-                    : null,
-          ),
+        child: Padding(
+          padding: EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          announcement.isUrgent
-                              ? Colors.red.shade50
-                              : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                  Expanded(
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          announcement.isUrgent
-                              ? Icons.warning
-                              : Icons.info_outline,
-                          size: 16,
+                          Icons.announcement,
                           color:
                               announcement.isUrgent
                                   ? Colors.red
-                                  : Colors.grey[700],
+                                  : Colors.red.shade900,
+                          size: 20,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          announcement.category,
-                          style: TextStyle(
-                            color:
-                                announcement.isUrgent
-                                    ? Colors.red
-                                    : Colors.grey[700],
-                            fontWeight: FontWeight.w500,
-                            fontSize: 12,
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            announcement.title,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Spacer(),
-                  Text(
-                    _formatDate(announcement.date),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      announcement.category,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.normal,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                announcement.title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.right,
-              ),
-              const SizedBox(height: 8),
+              SizedBox(height: 12),
               Text(
                 announcement.content,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                  height: 1.5,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 14, color: Colors.black54),
                 textAlign: TextAlign.right,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: 8),
+              Text(
+                _formatDate(announcement.date),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ],
           ),
@@ -561,6 +602,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
 }
 
 class Announcement {
+  final String id;
   final String title;
   final String content;
   final DateTime date;
@@ -568,6 +610,7 @@ class Announcement {
   final bool isUrgent;
 
   Announcement({
+    required this.id,
     required this.title,
     required this.content,
     required this.date,

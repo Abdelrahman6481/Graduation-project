@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SchedulePage extends StatefulWidget {
-  const SchedulePage({super.key});
+  final Map<String, dynamic>? userData;
+  final String userType;
+
+  const SchedulePage({super.key, this.userData, this.userType = 'student'});
 
   @override
   State<SchedulePage> createState() => _SchedulePageState();
@@ -14,6 +18,8 @@ class _SchedulePageState extends State<SchedulePage>
   late TabController _tabController;
   DateTime selectedDate = DateTime.now();
   String selectedDay = DateFormat('EEEE').format(DateTime.now());
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _schedules = [];
 
   @override
   void initState() {
@@ -23,6 +29,7 @@ class _SchedulePageState extends State<SchedulePage>
     if (initialIndex != -1) {
       _tabController.index = initialIndex;
     }
+    _fetchScheduleData();
   }
 
   final List<String> days = [
@@ -33,63 +40,154 @@ class _SchedulePageState extends State<SchedulePage>
     'Thursday',
   ];
 
-  final List<Map<String, dynamic>> schedules = [
-    {
-      'subject': 'Mathematics',
-      'day': 'Sunday',
-      'startTime': '10:00 AM',
-      'endTime': '12:00 PM',
-      'professor': 'Dr. Ahmed Hassan',
-      'room': 'Room 301',
-      'building': 'Building A',
-      'icon': Icons.calculate,
-      'color': Color(0xFF1E88E5),
-      'progress': 0.8,
-      'type': 'Lecture',
-    },
-    {
-      'subject': 'Physics Lab',
-      'day': 'Monday',
-      'startTime': '12:30 PM',
-      'endTime': '2:30 PM',
-      'professor': 'Dr. Sarah Wilson',
-      'room': 'Lab 2B',
-      'building': 'Science Building',
-      'icon': Icons.science,
-      'color': Color(0xFF43A047),
-      'progress': 0.6,
-      'type': 'Laboratory',
-    },
-    {
-      'subject': 'Computer Science',
-      'day': 'Wednesday',
-      'startTime': '9:00 AM',
-      'endTime': '11:00 AM',
-      'professor': 'Dr. Michael Brown',
-      'room': 'Computer Lab 1',
-      'building': 'Technology Center',
-      'icon': Icons.computer,
-      'color': Color(0xFF8E24AA),
-      'progress': 0.9,
-      'type': 'Practical',
-    },
-    {
-      'subject': 'English Literature',
-      'day': 'Thursday',
-      'startTime': '1:00 PM',
-      'endTime': '3:00 PM',
-      'professor': 'Mrs. Emily Parker',
-      'room': 'Room 205',
-      'building': 'Languages Building',
-      'icon': Icons.menu_book,
-      'color': Color(0xFFEF6C00),
-      'progress': 0.7,
-      'type': 'Seminar',
-    },
+  // Default icons and colors for subjects
+  final Map<String, IconData> subjectIcons = {
+    'Mathematics': Icons.calculate,
+    'Physics': Icons.science,
+    'Computer Science': Icons.computer,
+    'English': Icons.menu_book,
+    'default': Icons.school,
+  };
+
+  final Map<String, Color> subjectColors = {
+    'Mathematics': Color(0xFF1E88E5),
+    'Physics': Color(0xFF43A047),
+    'Computer Science': Color(0xFF8E24AA),
+    'English': Color(0xFFEF6C00),
+    'default': Color(0xFF607D8B),
+  };
+
+  // Quick action card colors from HomePage
+  final List<Color> cardColors = [
+    Colors.blue,
+    Colors.green,
+    Colors.orange,
+    Colors.purple,
+    Colors.teal,
+    Colors.indigo,
+    Colors.pink,
+    Colors.amber,
   ];
 
+  Future<void> _fetchScheduleData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get user's registered courses if we have userData
+      if (widget.userData != null) {
+        final String userId = widget.userData!['id'].toString();
+        List<String> courseIds = [];
+
+        // For students, get registered courses
+        if (widget.userType == 'student') {
+          final registrationsSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('courseRegistrations')
+                  .where('studentId', isEqualTo: int.tryParse(userId) ?? userId)
+                  .where('status', isEqualTo: 'active')
+                  .get();
+
+          courseIds =
+              registrationsSnapshot.docs
+                  .map((doc) => doc['courseId'].toString())
+                  .toList();
+        }
+        // For instructors, get assigned courses
+        else if (widget.userType == 'instructor') {
+          if (widget.userData!['assignedCourses'] != null) {
+            courseIds = List<String>.from(widget.userData!['assignedCourses']);
+          }
+        }
+
+        // Fetch course details for each registered course
+        List<Map<String, dynamic>> schedulesData = [];
+        int colorIndex = 0;
+
+        for (String courseId in courseIds) {
+          final courseSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('courses')
+                  .doc(courseId)
+                  .get();
+
+          if (courseSnapshot.exists) {
+            final courseData = courseSnapshot.data()!;
+
+            // Each course can have multiple lectures
+            final lectures = courseData['lectures'] as List<dynamic>? ?? [];
+
+            // Assign a color from the cardColors list
+            final Color cardColor = cardColors[colorIndex % cardColors.length];
+            colorIndex++;
+
+            for (var lecture in lectures) {
+              final subject = courseData['name'] ?? 'Unknown Subject';
+              final courseCode = courseData['code'] ?? '';
+              final professor = courseData['instructor'] ?? 'TBA';
+              final day = lecture['day'] ?? '';
+              final time = lecture['time'] ?? '';
+              final room = lecture['room'] ?? 'TBA';
+
+              // Parse time format like "9:00-10:30" into start and end times
+              String startTime = 'TBA';
+              String endTime = 'TBA';
+
+              if (time.contains('-')) {
+                final timeParts = time.split('-');
+                startTime = timeParts[0].trim();
+                endTime = timeParts[1].trim();
+              }
+
+              // Determine icon and color based on subject
+              IconData icon = subjectIcons['default']!;
+
+              // Try to match subject with predefined icons
+              for (var key in subjectIcons.keys) {
+                if (subject.toLowerCase().contains(key.toLowerCase())) {
+                  icon = subjectIcons[key]!;
+                  break;
+                }
+              }
+
+              schedulesData.add({
+                'subject': subject,
+                'courseCode': courseCode,
+                'day': day,
+                'startTime': startTime,
+                'endTime': endTime,
+                'professor': professor,
+                'room': room,
+                'building': 'CIC',
+                'icon': icon,
+                'color': cardColor,
+                'progress': 0.8, // Default progress
+                'type': 'Lecture',
+              });
+            }
+          }
+        }
+
+        setState(() {
+          _schedules = schedulesData;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching schedule data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   List<Map<String, dynamic>> get filteredSchedules {
-    return schedules
+    return _schedules
         .where((schedule) => schedule['day'] == selectedDay)
         .toList();
   }
@@ -103,7 +201,15 @@ class _SchedulePageState extends State<SchedulePage>
           children: [
             _buildHeader(),
             _buildDateSelector(),
-            Expanded(child: _buildScheduleList()),
+            _isLoading
+                ? Expanded(
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.red.shade900,
+                    ),
+                  ),
+                )
+                : Expanded(child: _buildScheduleList()),
           ],
         ),
       ),
@@ -316,7 +422,7 @@ class _SchedulePageState extends State<SchedulePage>
                               ),
                             ),
                             Text(
-                              schedule['type'],
+                              schedule['courseCode'] ?? schedule['type'],
                               style: TextStyle(
                                 color: schedule['color'],
                                 fontWeight: FontWeight.w500,
@@ -335,10 +441,11 @@ class _SchedulePageState extends State<SchedulePage>
                           borderRadius: BorderRadius.circular(15),
                         ),
                         child: Text(
-                          '${(schedule['progress'] * 100).toInt()}%',
+                          schedule['type'],
                           style: TextStyle(
                             color: schedule['color'],
                             fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         ),
                       ),

@@ -1,6 +1,7 @@
 import 'package:cic_hub/pages/dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'course_registration.dart';
 import 'profile.dart';
 import 'schedule.dart';
@@ -9,24 +10,80 @@ import 'attendance.dart';
 import 'results.dart';
 import 'online_services.dart';
 import 'announcements.dart';
+import 'support_help_desk.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final String? userType;
+  final Map<String, dynamic>? user;
+
+  const HomePage({super.key, this.userType, this.user});
 
   @override
-  // ignore: library_private_types_in_public_api
-  _HomePageState createState() => _HomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 2; // تغيير القيمة الابتدائية إلى 2 (موقع زر Home)
+  int _selectedIndex = 2;
+  Map<String, dynamic>? _studentData;
 
-  final List<Widget> _pages = [
-    const DashboardPage(), // استبدال النص السابق بصفحة Dashboard
+  @override
+  void initState() {
+    super.initState();
+    _loadStudentData();
+  }
+
+  Future<void> _loadStudentData() async {
+    if (widget.userType == 'student' && widget.user != null) {
+      try {
+        final studentDoc =
+            await FirebaseFirestore.instance
+                .collection('students')
+                .doc(widget.user!['id'])
+                .get();
+
+        if (studentDoc.exists) {
+          final data = studentDoc.data();
+
+          if (data != null) {
+            // Merge the user data from login with the Firestore data
+            final mergedData = {
+              ...data,
+              'name': widget.user!['name'] ?? data['name'],
+              'email': widget.user!['email'] ?? data['email'],
+              'level': widget.user!['level'] ?? data['level'],
+              'major': widget.user!['major'] ?? data['major'],
+              'collegeName': widget.user!['collegeName'] ?? data['collegeName'],
+              'credits': widget.user!['credits'] ?? data['credits'],
+              'gpa': widget.user!['gpa'] ?? data['gpa'],
+              'phone': widget.user!['phone'] ?? data['phone'],
+              'address': widget.user!['address'] ?? data['address'],
+            };
+
+            setState(() {
+              _studentData = mergedData;
+            });
+          }
+        } else {
+          // If document not found, use the data from login
+          setState(() {
+            _studentData = widget.user;
+          });
+        }
+      } catch (e) {
+        // If there's an error, use the data from login
+        setState(() {
+          _studentData = widget.user;
+        });
+      }
+    }
+  }
+
+  List<Widget> get _pages => [
+    const DashboardPage(),
     const OnlineServicesPage(),
-    const HomeContent(),
-    const CourseRegistration(), // تغيير من النص السابق إلى صفحة تسجيل المواد
-    const ProfilePage(),
+    HomeContent(studentData: _studentData),
+    ProfilePage(studentData: _studentData),
   ];
 
   @override
@@ -41,7 +98,7 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications, color: Colors.black),
+            icon: const Icon(Icons.notifications, color: Colors.black),
             onPressed: () {},
           ),
         ],
@@ -55,14 +112,14 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 40,
                     backgroundImage: AssetImage('assets/profile.png'),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   Text(
-                    'Abdelrahman Elasaeed',
-                    style: TextStyle(
+                    _studentData?['name'] ?? widget.user?['name'] ?? 'User',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -86,18 +143,13 @@ class _HomePageState extends State<HomePage> {
         color: Colors.red.shade900,
         buttonBackgroundColor: Colors.red.shade900,
         height: 60,
-        animationDuration: Duration(milliseconds: 300),
+        animationDuration: const Duration(milliseconds: 300),
         animationCurve: Curves.easeInOut,
         index: _selectedIndex,
-        items: [
+        items: const [
           Icon(Icons.dashboard_outlined, size: 30, color: Colors.white),
           Icon(Icons.calendar_month_outlined, size: 30, color: Colors.white),
-          Icon(
-            Icons.home_outlined,
-            size: 35,
-            color: Colors.white,
-          ), // زر Home في المنتصف
-          Icon(Icons.menu_book_outlined, size: 30, color: Colors.white),
+          Icon(Icons.home_outlined, size: 35, color: Colors.white),
           Icon(Icons.person_outline, size: 30, color: Colors.white),
         ],
         onTap: (index) {
@@ -121,12 +173,20 @@ class _HomePageState extends State<HomePage> {
           });
         } else if (title == 'Profile') {
           setState(() {
-            _selectedIndex = 4;
-          });
-        } else if (title == 'Courses') {
-          setState(() {
             _selectedIndex = 3;
           });
+        } else if (title == 'Courses') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => CourseRegistration(
+                    studentId: _studentData?['id']?.toString(),
+                  ),
+            ),
+          );
+        } else if (title == 'Logout') {
+          Navigator.pushReplacementNamed(context, '/login');
         }
       },
     );
@@ -134,16 +194,18 @@ class _HomePageState extends State<HomePage> {
 }
 
 class HomeContent extends StatelessWidget {
-  const HomeContent({super.key});
+  final Map<String, dynamic>? studentData;
+
+  const HomeContent({super.key, this.studentData});
 
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: () async {
-        await Future.delayed(Duration(seconds: 1));
+        await Future.delayed(const Duration(seconds: 1));
       },
       child: SingleChildScrollView(
-        physics: AlwaysScrollableScrollPhysics(),
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,7 +213,7 @@ class HomeContent extends StatelessWidget {
             // Welcome Card
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Colors.red.shade900, Colors.red.shade700],
@@ -164,43 +226,43 @@ class HomeContent extends StatelessWidget {
                     color: Colors.grey.withOpacity(0.3),
                     spreadRadius: 2,
                     blurRadius: 5,
-                    offset: Offset(0, 3),
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(3),
-                    decoration: BoxDecoration(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: CircleAvatar(
+                    child: const CircleAvatar(
                       radius: 35,
                       backgroundImage: AssetImage('assets/profile.png'),
                     ),
                   ),
-                  SizedBox(width: 15),
+                  const SizedBox(width: 15),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Welcome Back!',
                           style: TextStyle(color: Colors.white70, fontSize: 14),
                         ),
                         Text(
-                          'Abdelrahman',
-                          style: TextStyle(
+                          studentData?['name']?.split(' ')[0] ?? 'Student',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SizedBox(height: 5),
+                        const SizedBox(height: 5),
                         Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 10,
                             vertical: 5,
                           ),
@@ -209,8 +271,11 @@ class HomeContent extends StatelessWidget {
                             borderRadius: BorderRadius.circular(15),
                           ),
                           child: Text(
-                            'ID: 202106409',
-                            style: TextStyle(color: Colors.white, fontSize: 12),
+                            'ID: ${studentData?['id'] ?? 'N/A'}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ],
@@ -220,10 +285,10 @@ class HomeContent extends StatelessWidget {
               ),
             ),
 
-            SizedBox(height: 25),
+            const SizedBox(height: 25),
 
             // Quick Actions
-            Text(
+            const Text(
               'Quick Actions',
               style: TextStyle(
                 fontSize: 20,
@@ -231,10 +296,10 @@ class HomeContent extends StatelessWidget {
                 color: Colors.black87,
               ),
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             GridView.count(
               shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
               mainAxisSpacing: 15,
               crossAxisSpacing: 15,
@@ -245,39 +310,53 @@ class HomeContent extends StatelessWidget {
                   Icons.calendar_today,
                   Colors.blue,
                   context,
-                  SchedulePage(),
+                  SchedulePage(userData: studentData),
                 ),
                 _buildQuickActionCard(
                   'Attendance',
                   Icons.check_circle,
                   Colors.green,
                   context,
-                  AttendancePage(),
+                  const AttendancePage(),
+                ),
+                _buildQuickActionCard(
+                  'Registration',
+                  Icons.menu_book,
+                  Colors.red.shade900,
+                  context,
+                  CourseRegistration(studentId: studentData?['id']?.toString()),
+                ),
+                _buildQuickActionCard(
+                  'Support & Help',
+                  Icons.support_agent,
+                  Colors.teal,
+                  context,
+                  SupportHelpDeskPage(userData: studentData),
                 ),
                 _buildQuickActionCard(
                   'Payment',
                   Icons.payment,
                   Colors.orange,
                   context,
-                  PaymentPage(),
+                  const PaymentPage(),
                 ),
                 _buildQuickActionCard(
                   'Results',
                   Icons.grade,
                   Colors.purple,
                   context,
-                  ResultsPage(),
+                  const ResultsPage(),
                 ),
               ],
             ),
 
-            SizedBox(height: 25),
+            const SizedBox(height: 25),
 
             // Announcements Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                const Text(
                   'Announcements',
                   style: TextStyle(
                     fontSize: 20,
@@ -301,17 +380,69 @@ class HomeContent extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 10),
-            _buildAnnouncementCard(
-              'Important Notice',
-              'الهندسة المعمارية يرجى العلم بضرورة اجتياز امتحان القبول...',
-              '2 hours ago',
-            ),
-            SizedBox(height: 10),
-            _buildAnnouncementCard(
-              'Exam Schedule',
-              'تم نشر جدول الامتحانات النهائية للفصل الدراسي الحالي...',
-              '1 day ago',
+            const SizedBox(height: 10),
+
+            // Dynamic Announcements from Firestore
+            StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('announcements')
+                      .orderBy('date', descending: true)
+                      .limit(3)
+                      .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: CircularProgressIndicator(
+                        color: Colors.red.shade900,
+                      ),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text('Error loading announcements'),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Center(child: Text('No announcements available')),
+                  );
+                }
+
+                // Build announcement cards from Firestore data
+                return Column(
+                  children:
+                      snapshot.data!.docs.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+
+                        // Convert Timestamp to DateTime
+                        final date =
+                            data['date'] is Timestamp
+                                ? (data['date'] as Timestamp).toDate()
+                                : DateTime.now();
+
+                        // Format date as string
+                        final formattedDate = _formatDate(date);
+
+                        return Column(
+                          children: [
+                            _buildAnnouncementCard(
+                              data['title'] ?? 'Untitled',
+                              data['content'] ?? '',
+                              formattedDate,
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                        );
+                      }).toList(),
+                );
+              },
             ),
           ],
         ),
@@ -324,7 +455,7 @@ class HomeContent extends StatelessWidget {
     IconData icon,
     Color color,
     BuildContext context,
-    Widget targetPage, // إضافة صفحة الهدف
+    Widget targetPage,
   ) {
     return Card(
       elevation: 4,
@@ -338,15 +469,15 @@ class HomeContent extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(15),
         child: Container(
-          padding: EdgeInsets.all(15),
+          padding: const EdgeInsets.all(15),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 30, color: color),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 title,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.black87,
@@ -364,17 +495,17 @@ class HomeContent extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(Icons.announcement, color: Colors.red.shade900, size: 20),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
@@ -382,16 +513,16 @@ class HomeContent extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               content,
-              style: TextStyle(fontSize: 14, color: Colors.black54),
+              style: const TextStyle(fontSize: 14, color: Colors.black54),
               textAlign: TextAlign.right,
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               time,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
                 fontStyle: FontStyle.italic,
@@ -401,5 +532,20 @@ class HomeContent extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return DateFormat('MMM d, y').format(date);
+    }
   }
 }

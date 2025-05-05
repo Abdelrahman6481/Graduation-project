@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cic_hub/pages/home.dart';
+import 'package:cic_hub/services/auth_service.dart';
+import 'package:cic_hub/models/firestore_models.dart';
+import 'package:cic_hub/pages/admin_home.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'instructor_home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,21 +16,160 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  bool _obscurePassword = true;
-  final _idController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
+  bool _isLoading = false;
+  String? _errorMessage;
+  String? _debugInfo;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // First check if it's an admin
+      final adminSnapshot =
+          await FirebaseFirestore.instance
+              .collection('admins')
+              .where('email', isEqualTo: _emailController.text)
+              .limit(1)
+              .get();
+
+      if (adminSnapshot.docs.isNotEmpty) {
+        final adminData = adminSnapshot.docs.first.data();
+        if (adminData['password'] != _passwordController.text) {
+          _showError('Invalid password');
+          return;
+        }
+
+        // Admin login successful
+        await FirebaseFirestore.instance
+            .collection('admins')
+            .doc(adminSnapshot.docs.first.id)
+            .update({'lastLogin': FieldValue.serverTimestamp()});
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AdminHomePage(admin: adminData),
+          ),
+        );
+        return;
+      }
+
+      // Next check if it's an instructor
+      final instructorSnapshot =
+          await FirebaseFirestore.instance
+              .collection('instructors')
+              .where('email', isEqualTo: _emailController.text)
+              .limit(1)
+              .get();
+
+      if (instructorSnapshot.docs.isNotEmpty) {
+        final instructorData = instructorSnapshot.docs.first.data();
+        if (instructorData['password'] != _passwordController.text) {
+          _showError('Invalid password');
+          return;
+        }
+
+        // Instructor login successful
+        await FirebaseFirestore.instance
+            .collection('instructors')
+            .doc(instructorSnapshot.docs.first.id)
+            .update({'lastLogin': FieldValue.serverTimestamp()});
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => InstructorHomePage(instructor: instructorData),
+          ),
+        );
+        return;
+      }
+
+      // Finally check if it's a student
+      final studentSnapshot =
+          await FirebaseFirestore.instance
+              .collection('students')
+              .where('email', isEqualTo: _emailController.text)
+              .limit(1)
+              .get();
+
+      if (studentSnapshot.docs.isNotEmpty) {
+        final studentData = studentSnapshot.docs.first.data();
+
+        if (studentData['password'] != _passwordController.text) {
+          _showError('Invalid password');
+          return;
+        }
+
+        if (studentData['isBanned'] == true) {
+          _showError('Your account has been banned. Please contact admin.');
+          return;
+        }
+
+        // Student login successful
+        await FirebaseFirestore.instance
+            .collection('students')
+            .doc(studentSnapshot.docs.first.id)
+            .update({'lastLogin': FieldValue.serverTimestamp()});
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => HomePage(userType: 'student', user: studentData),
+          ),
+        );
+        return;
+      }
+
+      // No user found with provided email
+      _showError('No account found with this email');
+    } catch (e) {
+      _showError('Error during login: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showError(String message) {
+    setState(() {
+      _errorMessage = message;
+      _debugInfo = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, //? تأكيد أن الخلفية بيضاء
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           // Background Design
           Container(
             width: double.infinity,
             height: double.infinity,
-            color: Colors.white, //? تأكيد أن خلفية الـ Container بيضاء
+            color: Colors.white,
           ),
           Positioned(
             top: -100,
@@ -93,30 +237,35 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    // Student ID Field
+                    // Email Field
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: TextFormField(
-                        controller: _idController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          hintText: "Student ID",
+                          hintText: "Email",
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.all(20),
                           prefixIcon: Icon(
-                            Icons.person_outline,
+                            Icons.email,
                             color: Colors.red.shade900,
                           ),
                         ),
-                        validator:
-                            (value) =>
-                                value!.isEmpty ? 'Please enter your ID' : null,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(value)) {
+                            return 'Please enter a valid email';
+                          }
+                          return null;
+                        },
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -128,34 +277,25 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       child: TextFormField(
                         controller: _passwordController,
-                        obscureText: _obscurePassword,
+                        obscureText: true,
                         decoration: InputDecoration(
                           hintText: "Password",
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.all(20),
                           prefixIcon: Icon(
-                            Icons.lock_outline,
+                            Icons.lock,
                             color: Colors.red.shade900,
                           ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              color: Colors.grey[600],
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
                         ),
-                        validator:
-                            (value) =>
-                                value!.isEmpty
-                                    ? 'Please enter your password'
-                                    : null,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          if (value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -177,7 +317,7 @@ class _LoginPageState extends State<LoginPage> {
                     // Login Button
                     Container(
                       width: double.infinity,
-                      height: 60, //? ارتفاع ثابت للزر
+                      height: 60,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [Colors.red.shade900, Colors.red.shade800],
@@ -192,16 +332,7 @@ class _LoginPageState extends State<LoginPage> {
                         ],
                       ),
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const HomePage(),
-                              ),
-                            );
-                          }
-                        },
+                        onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
@@ -209,15 +340,20 @@ class _LoginPageState extends State<LoginPage> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Text(
-                          "Sign In",
-                          style: TextStyle(
-                            color: Colors.white, //? تغيير لون النص إلى الأبيض
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1,
-                          ),
-                        ),
+                        child:
+                            _isLoading
+                                ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                                : const Text(
+                                  "Sign In",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -238,6 +374,39 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                color: Colors.red.shade900,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (_debugInfo != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                _debugInfo!,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

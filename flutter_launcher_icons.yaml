@@ -1,0 +1,19 @@
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/applogo-Photoroom.png"
+
+  # تعطيل الأيقونة التكيفية لضمان ظهور الأيقونة كاملة
+  adaptive_icon_background: null
+  adaptive_icon_foreground: null
+
+  # إعدادات أساسية
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
+  # تعطيل الحشو التكيفي لمنع قص الأيقونة
+  android_adaptive_padding: false
+
+  # استخدام الصورة كاملة بدون أي تعديلات
+  android_gravity: center
+  ios_content_mode: center

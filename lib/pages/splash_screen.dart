@@ -77,10 +77,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     // الانتقال إلى الصفحة الرئيسية بعد 4.5 ثوانٍ
     Timer(const Duration(milliseconds: 4500), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const PreLoginPage()),
-      );
+      Navigator.pushReplacementNamed(context, '/prelogin');
     });
   }
 

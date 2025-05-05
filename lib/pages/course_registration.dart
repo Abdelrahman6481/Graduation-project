@@ -1,208 +1,111 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CourseRegistration extends StatefulWidget {
-  const CourseRegistration({super.key});
+  final String? studentId;
+
+  const CourseRegistration({super.key, this.studentId});
 
   @override
   State<CourseRegistration> createState() => _CourseRegistrationState();
 }
 
 class _CourseRegistrationState extends State<CourseRegistration> {
-  final List<Map<String, dynamic>> _availableCourses = [
-    {
-      'code': 'CS301',
-      'name': 'Software Engineering',
-      'credits': 3,
-      'instructor': 'Dr. Ahmed Hassan',
-      'availableSlots': [
-        {
-          'id': '1A',
-          'lectures': [
-            {'day': 'Sunday', 'time': '08:00 AM - 10:00 AM', 'room': '301'},
-            {'day': 'Tuesday', 'time': '10:00 AM - 12:00 PM', 'room': '302'},
-          ],
-        },
-        {
-          'id': '1B',
-          'lectures': [
-            {'day': 'Monday', 'time': '10:00 AM - 12:00 PM', 'room': '303'},
-            {'day': 'Wednesday', 'time': '08:00 AM - 10:00 AM', 'room': '304'},
-          ],
-        },
-      ],
-      'color': Colors.blue.shade100,
-      'textColor': Colors.blue.shade900,
-    },
-    {
-      'code': 'CS302',
-      'name': 'Database Systems',
-      'credits': 3,
-      'instructor': 'Dr. Sarah Wilson',
-      'availableSlots': [
-        {
-          'id': '2A',
-          'lectures': [
-            {'day': 'Monday', 'time': '01:00 PM - 03:00 PM', 'room': '201'},
-            {'day': 'Wednesday', 'time': '02:00 PM - 04:00 PM', 'room': '202'},
-          ],
-        },
-        {
-          'id': '2B',
-          'lectures': [
-            {'day': 'Sunday', 'time': '02:00 PM - 04:00 PM', 'room': '203'},
-            {'day': 'Tuesday', 'time': '01:00 PM - 03:00 PM', 'room': '204'},
-          ],
-        },
-      ],
-      'color': Colors.green.shade100,
-      'textColor': Colors.green.shade900,
-    },
-    {
-      'code': 'CS303',
-      'name': 'Computer Networks',
-      'credits': 3,
-      'instructor': 'Dr. Michael Brown',
-      'availableSlots': [
-        {
-          'id': '3A',
-          'lectures': [
-            {'day': 'Sunday', 'time': '11:00 AM - 01:00 PM', 'room': '401'},
-            {'day': 'Tuesday', 'time': '02:00 PM - 04:00 PM', 'room': '402'},
-          ],
-        },
-      ],
-      'color': Colors.purple.shade100,
-      'textColor': Colors.purple.shade900,
-    },
-    {
-      'code': 'CS304',
-      'name': 'Artificial Intelligence',
-      'credits': 3,
-      'instructor': 'Dr. Emily Parker',
-      'availableSlots': [
-        {
-          'id': '4A',
-          'lectures': [
-            {'day': 'Monday', 'time': '08:00 AM - 10:00 AM', 'room': '301'},
-            {'day': 'Wednesday', 'time': '10:00 AM - 12:00 PM', 'room': '302'},
-          ],
-        },
-      ],
-      'color': Colors.orange.shade100,
-      'textColor': Colors.orange.shade900,
-    },
-    {
-      'code': 'CS305',
-      'name': 'Web Development',
-      'credits': 3,
-      'instructor': 'Dr. John Smith',
-      'availableSlots': [
-        {
-          'id': '5A',
-          'lectures': [
-            {'day': 'Sunday', 'time': '09:00 AM - 11:00 AM', 'room': '501'},
-            {'day': 'Tuesday', 'time': '09:00 AM - 11:00 AM', 'room': '502'},
-          ],
-        },
-        {
-          'id': '5B',
-          'lectures': [
-            {'day': 'Monday', 'time': '02:00 PM - 04:00 PM', 'room': '503'},
-            {'day': 'Wednesday', 'time': '02:00 PM - 04:00 PM', 'room': '504'},
-          ],
-        },
-      ],
-      'color': Colors.teal.shade100,
-      'textColor': Colors.teal.shade900,
-    },
-    {
-      'code': 'CS306',
-      'name': 'Mobile App Development',
-      'credits': 3,
-      'instructor': 'Dr. Lisa Anderson',
-      'availableSlots': [
-        {
-          'id': '6A',
-          'lectures': [
-            {'day': 'Monday', 'time': '11:00 AM - 01:00 PM', 'room': '601'},
-            {'day': 'Wednesday', 'time': '11:00 AM - 01:00 PM', 'room': '602'},
-          ],
-        },
-      ],
-      'color': Colors.pink.shade100,
-      'textColor': Colors.pink.shade900,
-    },
-    {
-      'code': 'CS307',
-      'name': 'Data Science',
-      'credits': 3,
-      'instructor': 'Dr. Robert Johnson',
-      'availableSlots': [
-        {
-          'id': '7A',
-          'lectures': [
-            {'day': 'Sunday', 'time': '01:00 PM - 03:00 PM', 'room': '701'},
-            {'day': 'Tuesday', 'time': '01:00 PM - 03:00 PM', 'room': '702'},
-          ],
-        },
-      ],
-      'color': Colors.indigo.shade100,
-      'textColor': Colors.indigo.shade900,
-    },
-    {
-      'code': 'CS308',
-      'name': 'Cybersecurity',
-      'credits': 3,
-      'instructor': 'Dr. David Miller',
-      'availableSlots': [
-        {
-          'id': '8A',
-          'lectures': [
-            {'day': 'Monday', 'time': '09:00 AM - 11:00 AM', 'room': '801'},
-            {'day': 'Wednesday', 'time': '09:00 AM - 11:00 AM', 'room': '802'},
-          ],
-        },
-      ],
-      'color': Colors.red.shade100,
-      'textColor': Colors.red.shade900,
-    },
-    {
-      'code': 'CS309',
-      'name': 'Cloud Computing',
-      'credits': 3,
-      'instructor': 'Dr. Karen White',
-      'availableSlots': [
-        {
-          'id': '9A',
-          'lectures': [
-            {'day': 'Sunday', 'time': '10:00 AM - 12:00 PM', 'room': '901'},
-            {'day': 'Tuesday', 'time': '10:00 AM - 12:00 PM', 'room': '902'},
-          ],
-        },
-      ],
-      'color': Colors.amber.shade100,
-      'textColor': Colors.amber.shade900,
-    },
-    {
-      'code': 'CS310',
-      'name': 'Machine Learning',
-      'credits': 3,
-      'instructor': 'Dr. Thomas Lee',
-      'availableSlots': [
-        {
-          'id': '10A',
-          'lectures': [
-            {'day': 'Monday', 'time': '01:00 PM - 03:00 PM', 'room': '1001'},
-            {'day': 'Wednesday', 'time': '01:00 PM - 03:00 PM', 'room': '1002'},
-          ],
-        },
-      ],
-      'color': Colors.deepPurple.shade100,
-      'textColor': Colors.deepPurple.shade900,
-    },
+  final List<Map<String, dynamic>> _selectedCourses = [];
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _availableCourses = [];
+
+  // Colors for course cards
+  final List<Map<String, Color>> _courseColors = [
+    {'bg': Colors.blue.shade100, 'text': Colors.blue.shade900},
+    {'bg': Colors.green.shade100, 'text': Colors.green.shade900},
+    {'bg': Colors.purple.shade100, 'text': Colors.purple.shade900},
+    {'bg': Colors.orange.shade100, 'text': Colors.orange.shade900},
+    {'bg': Colors.teal.shade100, 'text': Colors.teal.shade900},
+    {'bg': Colors.pink.shade100, 'text': Colors.pink.shade900},
+    {'bg': Colors.indigo.shade100, 'text': Colors.indigo.shade900},
+    {'bg': Colors.red.shade100, 'text': Colors.red.shade900},
+    {'bg': Colors.amber.shade100, 'text': Colors.amber.shade900},
+    {'bg': Colors.deepPurple.shade100, 'text': Colors.deepPurple.shade900},
   ];
 
-  final List<Map<String, dynamic>> _selectedCourses = [];
+  @override
+  void initState() {
+    super.initState();
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('courses').get();
+
+      final List<Map<String, dynamic>> loadedCourses = [];
+
+      int colorIndex = 0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final course = {
+          ...data,
+          'id': doc.id,
+          'color': _courseColors[colorIndex % _courseColors.length]['bg'],
+          'textColor': _courseColors[colorIndex % _courseColors.length]['text'],
+        };
+
+        // Get lectures directly from the course document
+        if (data['lectures'] != null && (data['lectures'] as List).isNotEmpty) {
+          // Extract lectures from the course document
+          final List<dynamic> lectureDocs = data['lectures'] as List;
+
+          // Organize lectures into sections
+          // We'll use one section "A" for simplicity, but you could split them based on some criteria
+          final String sectionId = 'A';
+          final List<Map<String, dynamic>> availableSlots = [];
+
+          // Create a section with all lectures
+          final Map<String, dynamic> section = {
+            'id': sectionId,
+            'lectures':
+                lectureDocs
+                    .map(
+                      (lecture) => {
+                        'day': lecture['day'] ?? 'Unknown',
+                        'time': lecture['time'] ?? 'Unknown',
+                        'room': lecture['room'] ?? 'Unknown',
+                      },
+                    )
+                    .toList(),
+          };
+
+          availableSlots.add(section);
+          course['availableSlots'] = availableSlots;
+        } else {
+          // No lectures found in the course document, create an empty list
+          course['availableSlots'] = [];
+        }
+
+        loadedCourses.add(course);
+        colorIndex++;
+      }
+
+      setState(() {
+        _availableCourses = loadedCourses;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading courses: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading courses: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -247,12 +150,22 @@ class _CourseRegistrationState extends State<CourseRegistration> {
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _availableCourses.length,
-        itemBuilder:
-            (context, index) => _buildCourseCard(_availableCourses[index]),
-      ),
+      body:
+          _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: _loadCourses,
+                child:
+                    _availableCourses.isEmpty
+                        ? Center(child: Text('No courses available'))
+                        : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _availableCourses.length,
+                          itemBuilder:
+                              (context, index) =>
+                                  _buildCourseCard(_availableCourses[index]),
+                        ),
+              ),
     );
   }
 
@@ -272,7 +185,7 @@ class _CourseRegistrationState extends State<CourseRegistration> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      course['code'],
+                      course['code'] ?? 'No Code',
                       style: TextStyle(
                         color: course['textColor'],
                         fontWeight: FontWeight.bold,
@@ -281,7 +194,7 @@ class _CourseRegistrationState extends State<CourseRegistration> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      course['name'],
+                      course['name'] ?? 'Unnamed Course',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -289,7 +202,7 @@ class _CourseRegistrationState extends State<CourseRegistration> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      course['instructor'],
+                      course['instructor'] ?? 'No Instructor Assigned',
                       style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     ),
                   ],
@@ -302,7 +215,7 @@ class _CourseRegistrationState extends State<CourseRegistration> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${course['credits']} Credits',
+                  '${course['credits'] ?? 0} Credits',
                   style: TextStyle(
                     color: course['textColor'],
                     fontWeight: FontWeight.bold,
@@ -342,59 +255,74 @@ class _CourseRegistrationState extends State<CourseRegistration> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                ...course['availableSlots']
-                    .map<Widget>(
-                      (slot) => Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: InkWell(
-                          onTap: () {
-                            _selectTimeSlot(course, slot);
-                            Navigator.pop(context);
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Section ${slot['id']}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                if (course['availableSlots'] == null ||
+                    course['availableSlots'].isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16.0),
+                    child: Center(
+                      child: Text(
+                        'No lecture schedules available for this course',
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  ...course['availableSlots']
+                      .map<Widget>(
+                        (slot) => Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: InkWell(
+                            onTap: () {
+                              _selectTimeSlot(course, slot);
+                              Navigator.pop(context);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Section ${slot['id']}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                ...slot['lectures']
-                                    .map<Widget>(
-                                      (lecture) => Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 4,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.access_time,
-                                              size: 16,
-                                              color: course['textColor'],
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              '${lecture['day']}: ${lecture['time']} (Room ${lecture['room']})',
-                                              style: const TextStyle(
-                                                fontSize: 14,
+                                  const SizedBox(height: 8),
+                                  ...slot['lectures']
+                                      .map<Widget>(
+                                        (lecture) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 4,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.access_time,
+                                                size: 16,
+                                                color: course['textColor'],
                                               ),
-                                            ),
-                                          ],
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                '${lecture['day']}: ${lecture['time']} (Room ${lecture['room']})',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    )
-                                    .toList(),
-                              ],
+                                      )
+                                      .toList(),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
               ],
             ),
           ),
@@ -504,15 +432,7 @@ class _CourseRegistrationState extends State<CourseRegistration> {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Courses registered successfully'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                        setState(() {
-                          _selectedCourses.clear();
-                        });
+                        _registerCourses();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade900,
@@ -528,5 +448,93 @@ class _CourseRegistrationState extends State<CourseRegistration> {
             ),
           ),
     );
+  }
+
+  Future<void> _registerCourses() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(color: Colors.red.shade900),
+              const SizedBox(width: 16),
+              const Text("Registering courses..."),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      // Validate student ID
+      final studentId = widget.studentId;
+      if (studentId == null || studentId.isEmpty) {
+        throw Exception("Student ID is not available");
+      }
+
+      // For each selected course, create a registration record
+      for (var course in _selectedCourses) {
+        final courseId = course['id'];
+
+        // Check if the student is already registered for this course
+        final existingRegistration =
+            await FirebaseFirestore.instance
+                .collection('courseRegistrations')
+                .where(
+                  'studentId',
+                  isEqualTo: int.tryParse(studentId) ?? studentId,
+                )
+                .where('courseId', isEqualTo: courseId)
+                .where('status', isEqualTo: 'active')
+                .get();
+
+        if (existingRegistration.docs.isEmpty) {
+          // Create new registration document
+          await FirebaseFirestore.instance
+              .collection('courseRegistrations')
+              .add({
+                'studentId': int.tryParse(studentId) ?? studentId,
+                'courseId': courseId,
+                'registrationDate': FieldValue.serverTimestamp(),
+                'status': 'active',
+                'sectionId': course['selectedSlot']['id'],
+              });
+        }
+      }
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Courses registered successfully! They will now appear in your schedule.',
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      // Clear selected courses
+      setState(() {
+        _selectedCourses.clear();
+      });
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to register courses: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      print('Error registering courses: $e');
+    }
   }
 }
