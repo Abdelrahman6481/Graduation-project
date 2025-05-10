@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/firestore_service.dart';
-import 'instructor_home.dart';
+import '../../services/firestore_service.dart';
+import '../instructor/instructor_home.dart';
 
 class InstructorLoginPage extends StatefulWidget {
   const InstructorLoginPage({Key? key}) : super(key: key);

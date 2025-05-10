@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cic_hub/pages/home.dart';
+import 'package:cic_hub/pages/student/home.dart';
 import 'package:cic_hub/services/auth_service.dart';
 import 'package:cic_hub/models/firestore_models.dart';
-import 'package:cic_hub/pages/admin_home.dart';
+import 'package:cic_hub/pages/admin/admin_home.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'instructor_home.dart';
+import '../instructor/instructor_home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

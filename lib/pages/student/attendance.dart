@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/firestore_service.dart';
+import '../../services/firestore_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AttendancePage extends StatefulWidget {

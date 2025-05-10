@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
-import '../services/firestore_service.dart';
+import '../../services/firestore_service.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 
 class ProfilePage extends StatefulWidget {

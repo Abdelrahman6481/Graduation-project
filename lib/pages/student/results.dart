@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/firestore_service.dart';
+import '../../services/firestore_service.dart';
 
 class ResultsPage extends StatefulWidget {
   final Map<String, dynamic>? student;

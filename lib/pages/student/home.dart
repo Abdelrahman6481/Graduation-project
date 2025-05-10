@@ -1,4 +1,4 @@
-import 'package:cic_hub/pages/dashboard.dart';
+import 'dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,9 +8,9 @@ import 'schedule.dart';
 import 'payment.dart';
 import 'attendance.dart';
 import 'results.dart';
-import 'online_services.dart';
-import 'announcements.dart';
-import 'support_help_desk.dart';
+import '../services/online_services.dart';
+import '../services/announcements.dart';
+import '../support/support_help_desk.dart';
 import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {

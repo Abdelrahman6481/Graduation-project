@@ -3,13 +3,13 @@ import 'package:flutter/services.dart'; // ?مكتبة التحكم في الن�
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'pages/splash_screen.dart'; // ? استدعاء شاشة السبللاش // استدعاء صفحة الملف الشخصي
-import 'pages/login.dart';
-import 'pages/prelogin.dart';
-import 'pages/home.dart';
-import 'pages/instructor_login.dart';
-import 'pages/instructor_home.dart';
-import 'pages/admin_home.dart';
+import 'pages/auth/splash_screen.dart'; // ? استدعاء شاشة السبللاش
+import 'pages/auth/login.dart';
+import 'pages/auth/prelogin.dart';
+import 'pages/student/home.dart';
+import 'pages/auth/instructor_login.dart';
+import 'pages/instructor/instructor_home.dart';
+import 'pages/admin/admin_home.dart';
 import 'services/firestore_service.dart';
 
 // These functions are kept for reference but not called on startup anymore

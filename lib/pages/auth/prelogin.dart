@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cic_hub/pages/home.dart';
+import 'package:cic_hub/pages/student/home.dart';
 import 'login.dart';
 import 'instructor_login.dart';
 

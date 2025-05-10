@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../services/firestore_service.dart';
+import '../../services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import '../models/firestore_models.dart';
+import '../../models/firestore_models.dart';
 import 'admin_support_tickets.dart';
 
 class AdminHomePage extends StatefulWidget {
