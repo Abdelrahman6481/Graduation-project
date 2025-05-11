@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -33,11 +34,20 @@ class _AttendancePageState extends State<AttendancePage> {
   List<Map<String, dynamic>> _instructorCourses = [];
   String _userRole = '';
   String _loadingError = '';
+  // Stream subscription for real-time attendance updates
+  StreamSubscription<List<Map<String, dynamic>>>? _attendanceStreamSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    // Cancel the stream subscription when the widget is disposed
+    _attendanceStreamSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -108,7 +118,11 @@ class _AttendancePageState extends State<AttendancePage> {
           return;
         }
 
-        // For each course registration, get the course details and attendance
+        // Map to store course data for each course ID
+        Map<int, Map<String, dynamic>> coursesData = {};
+        Map<int, String> instructorNames = {};
+
+        // First, get all course data and instructor names
         for (var registration in registrations) {
           if (registration.status != 'active') continue;
 
@@ -122,172 +136,122 @@ class _AttendancePageState extends State<AttendancePage> {
           if (!courseDoc.exists || courseDoc.data() == null) continue;
 
           final courseData = courseDoc.data()!;
+          coursesData[courseId] = courseData;
 
-          try {
-            // Get attendance records for this student and course
-            final attendanceRecords = await _firestoreService
-                .getAttendanceForStudent(_studentId, courseId);
-
-            // Calculate attendance stats
-            int totalClasses = attendanceRecords.length;
-            int attendedClasses =
-                attendanceRecords
-                    .where((record) => record['isPresent'] == true)
-                    .length;
-            double attendancePercentage =
-                totalClasses > 0 ? (attendedClasses / totalClasses) * 100 : 0;
-
-            // Find the most recent attendance
-            DateTime? lastAttendance;
-            if (attendanceRecords.isNotEmpty) {
-              final sortedRecords = List<Map<String, dynamic>>.from(
-                attendanceRecords,
-              )..sort((a, b) {
-                final dateA = a['date'] as Timestamp?;
-                final dateB = b['date'] as Timestamp?;
-                if (dateA == null || dateB == null) return 0;
-                return dateB.compareTo(dateA);
-              });
-
-              if (sortedRecords.isNotEmpty &&
-                  sortedRecords.first['date'] != null) {
-                lastAttendance =
-                    (sortedRecords.first['date'] as Timestamp).toDate();
-              }
-            }
-
-            String instructorName = 'Unknown Instructor';
-            try {
-              // Get instructor's name
-              final instructorIdValue = courseData['instructor'];
-              if (instructorIdValue != null) {
-                final instructorId = int.tryParse(instructorIdValue.toString());
-                if (instructorId != null) {
-                  try {
-                    final instructorDoc =
-                        await FirebaseFirestore.instance
-                            .collection('instructors')
-                            .doc(instructorId.toString())
-                            .get();
-
-                    if (instructorDoc.exists && instructorDoc.data() != null) {
-                      final data = instructorDoc.data()!;
-                      instructorName =
-                          data['name']?.toString() ??
-                          data['fullName']?.toString() ??
-                          data['full_name']?.toString() ??
-                          'Instructor #$instructorId';
-                      print(
-                        'Found instructor: $instructorName for course ${courseData['name']}',
-                      );
-                    } else {
-                      // Try alternate lookup by querying instead of direct document access
-                      final instructorsQuery =
-                          await FirebaseFirestore.instance
-                              .collection('instructors')
-                              .where('id', isEqualTo: instructorId.toString())
-                              .limit(1)
-                              .get();
-
-                      if (instructorsQuery.docs.isNotEmpty &&
-                          instructorsQuery.docs.first.data() != null) {
-                        final data = instructorsQuery.docs.first.data();
-                        instructorName =
-                            data['name']?.toString() ??
-                            data['fullName']?.toString() ??
-                            data['full_name']?.toString() ??
-                            'Instructor #$instructorId';
-                        print(
-                          'Found instructor via query: $instructorName for course ${courseData['name']}',
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    print('Error fetching instructor #$instructorId: $e');
-                  }
-                }
-              } else if (courseData['instructorName'] != null) {
-                // Some courses might store instructor name directly
-                instructorName = courseData['instructorName'].toString();
-                print(
-                  'Using direct instructorName: $instructorName for course ${courseData['name']}',
-                );
-              } else if (courseData['instructor_name'] != null) {
-                // Check alternative field name
-                instructorName = courseData['instructor_name'].toString();
-                print(
-                  'Using direct instructor_name: $instructorName for course ${courseData['name']}',
-                );
-              }
-
-              // As a last resort, try to find instructor using course ID
-              if (instructorName == 'Unknown Instructor') {
-                try {
-                  final instructorAssignments =
-                      await FirebaseFirestore.instance
-                          .collection('instructorAssignments')
-                          .where('courseId', isEqualTo: courseId.toString())
-                          .limit(1)
-                          .get();
-
-                  if (instructorAssignments.docs.isNotEmpty) {
-                    final assignment = instructorAssignments.docs.first.data();
-                    final assignedInstructorId =
-                        assignment['instructorId']?.toString();
-
-                    if (assignedInstructorId != null) {
-                      final instructorDoc =
-                          await FirebaseFirestore.instance
-                              .collection('instructors')
-                              .doc(assignedInstructorId)
-                              .get();
-
-                      if (instructorDoc.exists &&
-                          instructorDoc.data() != null) {
-                        final data = instructorDoc.data()!;
-                        instructorName =
-                            data['name']?.toString() ??
-                            data['fullName']?.toString() ??
-                            data['full_name']?.toString() ??
-                            'Instructor #$assignedInstructorId';
-                        print(
-                          'Found instructor via assignment: $instructorName for course ${courseData['name']}',
-                        );
-                      }
-                    }
-                  }
-                } catch (e) {
-                  print('Error finding instructor via assignments: $e');
-                }
-              }
-            } catch (e) {
-              print('Error getting instructor data: $e');
-            }
-
-            // Add to our courses list
-            _courses.add(
-              CourseAttendance(
-                name: courseData['name']?.toString() ?? 'Unknown Course',
-                code: courseData['code']?.toString() ?? 'Unknown Code',
-                attendancePercentage: attendancePercentage,
-                totalClasses: totalClasses,
-                attendedClasses: attendedClasses,
-                lastAttendance: lastAttendance ?? DateTime.now(),
-                color: _getRandomColor(courseId),
-                instructor: instructorName,
-              ),
-            );
-          } catch (e) {
-            print('Error getting attendance for course $courseId: $e');
-            // Continue to next course instead of failing completely
-          }
+          // Get instructor name
+          String instructorName = await _getInstructorNameForCourse(
+            courseId,
+            courseData,
+          );
+          instructorNames[courseId] = instructorName;
         }
 
-        if (_courses.isEmpty) {
-          // No courses with attendance data found, use test data
-          _useTestData = true;
-          _loadTestData();
-          return;
+        // Cancel any existing subscription
+        await _attendanceStreamSubscription?.cancel();
+
+        // Subscribe to real-time attendance updates for this student
+        _attendanceStreamSubscription = _firestoreService
+            .getAllAttendanceStreamForStudent(_studentId)
+            .listen(
+              (attendanceRecords) {
+                if (!mounted) return;
+
+                // Group attendance records by course
+                Map<int, List<Map<String, dynamic>>> attendanceByCourseid = {};
+
+                for (var record in attendanceRecords) {
+                  final courseId = record['courseId'];
+                  if (courseId == null) continue;
+
+                  if (!attendanceByCourseid.containsKey(courseId)) {
+                    attendanceByCourseid[courseId] = [];
+                  }
+                  attendanceByCourseid[courseId]!.add(record);
+                }
+
+                // Process each course's attendance data
+                List<CourseAttendance> updatedCourses = [];
+
+                for (var courseId in coursesData.keys) {
+                  final courseData = coursesData[courseId]!;
+                  final instructorName =
+                      instructorNames[courseId] ?? 'Course Instructor';
+                  final courseAttendanceRecords =
+                      attendanceByCourseid[courseId] ?? [];
+
+                  // Calculate attendance stats
+                  int totalClasses = courseAttendanceRecords.length;
+                  int attendedClasses =
+                      courseAttendanceRecords
+                          .where((record) => record['isPresent'] == true)
+                          .length;
+                  double attendancePercentage =
+                      totalClasses > 0
+                          ? (attendedClasses / totalClasses) * 100
+                          : 0;
+
+                  // Find the most recent attendance
+                  DateTime lastAttendance = DateTime.now();
+                  if (courseAttendanceRecords.isNotEmpty) {
+                    final sortedRecords = List<Map<String, dynamic>>.from(
+                      courseAttendanceRecords,
+                    )..sort((a, b) {
+                      final dateA = a['date'] as Timestamp?;
+                      final dateB = b['date'] as Timestamp?;
+                      if (dateA == null || dateB == null) return 0;
+                      return dateB.compareTo(dateA);
+                    });
+
+                    if (sortedRecords.isNotEmpty &&
+                        sortedRecords.first['date'] != null) {
+                      lastAttendance =
+                          (sortedRecords.first['date'] as Timestamp).toDate();
+                    }
+                  }
+
+                  // Add to our courses list
+                  updatedCourses.add(
+                    CourseAttendance(
+                      name: courseData['name']?.toString() ?? 'Unknown Course',
+                      code: courseData['code']?.toString() ?? 'Unknown Code',
+                      attendancePercentage: attendancePercentage,
+                      totalClasses: totalClasses,
+                      attendedClasses: attendedClasses,
+                      lastAttendance: lastAttendance,
+                      color: _getRandomColor(courseId),
+                      instructor: instructorName,
+                    ),
+                  );
+                }
+
+                // Update the UI with the new data
+                setState(() {
+                  _courses = updatedCourses;
+                  _isLoading = false;
+                });
+              },
+              onError: (error) {
+                print('Error in attendance stream: $error');
+                if (mounted) {
+                  setState(() {
+                    _loadingError = 'Error loading attendance data: $error';
+                    _isLoading = false;
+                  });
+                }
+              },
+            );
+
+        // Initial load of data
+        final allAttendanceRecords =
+            await _firestoreService
+                .getAllAttendanceStreamForStudent(_studentId)
+                .first;
+
+        if (allAttendanceRecords.isEmpty && mounted) {
+          setState(() {
+            _isLoading = false;
+            _loadingError = 'No attendance records found.';
+          });
         }
       } catch (e) {
         print('Error loading registrations: $e');

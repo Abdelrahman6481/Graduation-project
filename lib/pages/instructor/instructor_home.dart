@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
 import '../../models/firestore_models.dart';
+import 'grade_entry_form.dart';
 
 class InstructorHomePage extends StatefulWidget {
   final Map<String, dynamic> instructor;
@@ -33,7 +34,7 @@ class _InstructorHomePageState extends State<InstructorHomePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadAssignedCourses();
   }
 
@@ -148,6 +149,7 @@ class _InstructorHomePageState extends State<InstructorHomePage>
             Tab(text: 'Courses', icon: Icon(Icons.book)),
             Tab(text: 'Schedule', icon: Icon(Icons.schedule)),
             Tab(text: 'Attendance', icon: Icon(Icons.how_to_reg)),
+            Tab(text: 'Results', icon: Icon(Icons.grading)),
           ],
         ),
       ),
@@ -165,6 +167,9 @@ class _InstructorHomePageState extends State<InstructorHomePage>
 
           // Attendance Tab
           _buildAttendanceTab(),
+
+          // Results Tab
+          _buildResultsTab(),
         ],
       ),
     );
@@ -612,6 +617,236 @@ class _InstructorHomePageState extends State<InstructorHomePage>
                   _assignedCourses
                       .map((course) => _buildCourseAttendanceTab(course))
                       .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_assignedCourses.isEmpty) {
+      return const Center(child: Text('No courses assigned to manage results'));
+    }
+
+    return DefaultTabController(
+      length: _assignedCourses.length,
+      child: Column(
+        children: [
+          Container(
+            color: Colors.grey[200],
+            child: TabBar(
+              isScrollable: true,
+              labelColor: Colors.red.shade900,
+              unselectedLabelColor: Colors.grey,
+              tabs:
+                  _assignedCourses
+                      .map((course) => Tab(text: course['code']))
+                      .toList(),
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children:
+                  _assignedCourses
+                      .map((course) => _buildCourseResultsTab(course))
+                      .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCourseResultsTab(Map<String, dynamic> course) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Course info header
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    course['name'] ?? 'Unknown Course',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Code: ${course['code']} • Credits: ${course['credits']}',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Grade entry button
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade900,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text('Enter Student Grades'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => GradeEntryForm(
+                          course: course,
+                          instructor: widget.instructor,
+                        ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Results list
+          const Text(
+            'Recent Results',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: FirestoreService().getAllCourseResults(
+                int.tryParse(course['id'].toString()) ?? 0,
+              ),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                final results = snapshot.data ?? [];
+
+                if (results.isEmpty) {
+                  return const Center(
+                    child: Text('No results recorded for this course yet'),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: results.length,
+                  itemBuilder: (context, index) {
+                    final result = results[index];
+                    final studentName =
+                        result['studentName'] ?? 'Unknown Student';
+                    final studentId = result['studentId'] ?? 'N/A';
+                    final totalGrade = result['totalGrade'] ?? 0.0;
+                    final letterGrade = result['letterGrade'] ?? 'N/A';
+                    final isPublished = result['isPublished'] ?? false;
+
+                    Color gradeColor;
+                    switch (letterGrade) {
+                      case 'A':
+                        gradeColor = Colors.green;
+                        break;
+                      case 'B':
+                        gradeColor = Colors.blue;
+                        break;
+                      case 'C':
+                        gradeColor = Colors.orange;
+                        break;
+                      case 'D':
+                        gradeColor = Colors.deepOrange;
+                        break;
+                      default:
+                        gradeColor = Colors.red;
+                    }
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: gradeColor.withOpacity(0.2),
+                          child: Text(
+                            letterGrade,
+                            style: TextStyle(
+                              color: gradeColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        title: Text(studentName),
+                        subtitle: Text('ID: $studentId'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${totalGrade.toStringAsFixed(1)}/100',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    isPublished
+                                        ? Colors.green.withOpacity(0.2)
+                                        : Colors.grey.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                isPublished ? 'Published' : 'Draft',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color:
+                                      isPublished ? Colors.green : Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          // Navigate to edit this student's grade
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => GradeEntryForm(
+                                    course: course,
+                                    instructor: widget.instructor,
+                                  ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
