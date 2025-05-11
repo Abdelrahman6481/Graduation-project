@@ -387,6 +387,52 @@ class FirestoreService {
     }
   }
 
+  // Get real-time stream of attendance for a student
+  Stream<List<Map<String, dynamic>>> getAttendanceStreamForStudent(
+    int studentId,
+    int courseId,
+  ) {
+    try {
+      return _firestore
+          .collection('attendance')
+          .where('studentId', isEqualTo: studentId)
+          .where('courseId', isEqualTo: courseId)
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map(
+            (snapshot) =>
+                snapshot.docs
+                    .map((doc) => doc.data() as Map<String, dynamic>)
+                    .toList(),
+          );
+    } catch (e) {
+      print('Error getting attendance stream for student: $e');
+      rethrow;
+    }
+  }
+
+  // Get real-time stream of all attendance for a student
+  Stream<List<Map<String, dynamic>>> getAllAttendanceStreamForStudent(
+    int studentId,
+  ) {
+    try {
+      return _firestore
+          .collection('attendance')
+          .where('studentId', isEqualTo: studentId)
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map(
+            (snapshot) =>
+                snapshot.docs
+                    .map((doc) => doc.data() as Map<String, dynamic>)
+                    .toList(),
+          );
+    } catch (e) {
+      print('Error getting all attendance stream for student: $e');
+      rethrow;
+    }
+  }
+
   // Student Results Operations
   Future<void> recordStudentResult({
     required int studentId,
@@ -728,16 +774,27 @@ class FirestoreService {
   // Get all course results including unpublished ones (for instructors)
   Future<List<Map<String, dynamic>>> getAllCourseResults(int courseId) async {
     try {
+      // Primero obtenemos los resultados sin ordenar
       final resultsQuery =
           await _firestore
               .collection('studentResults')
               .where('courseId', isEqualTo: courseId.toString())
-              .orderBy('totalGrade', descending: true)
               .get();
 
-      return resultsQuery.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
-          .toList();
+      // Convertimos los documentos a una lista de mapas
+      final results =
+          resultsQuery.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
+
+      // Ordenamos la lista manualmente por totalGrade en orden descendente
+      results.sort((a, b) {
+        final totalGradeA = (a['totalGrade'] ?? 0.0) as num;
+        final totalGradeB = (b['totalGrade'] ?? 0.0) as num;
+        return totalGradeB.compareTo(totalGradeA); // Orden descendente
+      });
+
+      return results;
     } catch (e) {
       print('Error getting course results: $e');
       rethrow;
