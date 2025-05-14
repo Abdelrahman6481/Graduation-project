@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
 import 'package:intl/intl.dart';
 
-// Admin Results Approval Page
+//! دي صفحة الأدمن اللي بيوافق فيها على نتايج الطلبة ويقدر ينشرها
 class AdminResultsApprovalPage extends StatefulWidget {
   const AdminResultsApprovalPage({Key? key}) : super(key: key);
 
@@ -33,21 +33,21 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
     super.dispose();
   }
 
-  // Load results from database
+  //! هنا بنجيب النتايج من الداتابيز عشان نعرضها للأدمن
   Future<void> _loadResults() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Load pending results (not published)
+      //! هنجيب النتايج اللي لسه مانشرتش (اللي محتاجة موافقة)
       final pendingResultsQuery =
           await FirebaseFirestore.instance
               .collection('studentResults')
               .where('isPublished', isEqualTo: false)
               .get();
 
-      // Load published results
+      //! هنجيب النتايج اللي اتنشرت خلاص للطلبة
       final publishedResultsQuery =
           await FirebaseFirestore.instance
               .collection('studentResults')
@@ -57,19 +57,19 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
       final List<Map<String, dynamic>> pendingResults = [];
       final List<Map<String, dynamic>> publishedResults = [];
 
-      // Process pending results
+      //! هنجهز النتايج اللي محتاجة موافقة عشان نعرضها
       for (var doc in pendingResultsQuery.docs) {
         final data = doc.data();
         pendingResults.add({'id': doc.id, ...data});
       }
 
-      // Process published results
+      //!! هنجهز النتايج اللي اتنشرت خلاص عشان نعرضها
       for (var doc in publishedResultsQuery.docs) {
         final data = doc.data();
         publishedResults.add({'id': doc.id, ...data});
       }
 
-      // Sort results by updatedAt timestamp (most recent first)
+      //! هنرتب النتايج حسب وقت التحديث (الأحدث الأول) عشان نشوف آخر النتايج
       pendingResults.sort((a, b) {
         final aTime = a['updatedAt'] as Timestamp?;
         final bTime = b['updatedAt'] as Timestamp?;
@@ -101,7 +101,7 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
     }
   }
 
-  // Publish a single result
+  //! دي الفنكشن اللي بتنشر نتيجة واحدة للطالب
   Future<void> _publishResult(String resultId) async {
     try {
       await FirebaseFirestore.instance
@@ -113,7 +113,7 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
             'updatedAt': FieldValue.serverTimestamp(),
           });
 
-      // Refresh the list
+      //! هنحدث القايمة عشان نشوف التغييرات
       await _loadResults();
 
       if (mounted) {
@@ -130,7 +130,7 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
     }
   }
 
-  // Publish all results for a course
+  //! دي الفنكشن اللي بتنشر كل نتايج المادة مرة واحدة
   Future<void> _publishAllResultsForCourse(String courseId) async {
     try {
       await _firestoreService.publishStudentResults(
@@ -138,7 +138,7 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
         publishAll: true,
       );
 
-      // Refresh the list
+      //! هنحدث القايمة عشان نشوف التغييرات
       await _loadResults();
 
       if (mounted) {
@@ -157,7 +157,7 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
     }
   }
 
-  // Unpublish a result
+  //! دي الفنكشن اللي بتلغي نشر النتيجة (لو فيه غلط مثلا)
   Future<void> _unpublishResult(String resultId) async {
     try {
       await FirebaseFirestore.instance
@@ -169,7 +169,7 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
             'updatedAt': FieldValue.serverTimestamp(),
           });
 
-      // Refresh the list
+      //! هنحدث القايمة عشان نشوف التغييرات
       await _loadResults();
 
       if (mounted) {
@@ -219,22 +219,22 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
               : TabBarView(
                 controller: _tabController,
                 children: [
-                  // Pending results
+                  //!تاب النتايج اللي محتاجة موافقة
                   _buildPendingResultsTab(),
-                  // Published results
+                  //! تاب النتايج اللي اتنشرت خلاص
                   _buildPublishedResultsTab(),
                 ],
               ),
     );
   }
 
-  // Build pending results tab
+  //! هنا بنبني تاب النتايج اللي محتاجة موافقة
   Widget _buildPendingResultsTab() {
     if (_pendingResults.isEmpty) {
       return const Center(child: Text('No pending results to approve'));
     }
 
-    // Group results by course
+    //! هنجمع النتايج حسب المادة عشان نعرضها بشكل منظم
     final Map<String, List<Map<String, dynamic>>> resultsByCourse = {};
     for (var result in _pendingResults) {
       final courseId = result['courseId'];
@@ -300,7 +300,7 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
     );
   }
 
-  // Build published results tab
+  //! هنا بنبني تاب النتايج اللي اتنشرت خلاص
   Widget _buildPublishedResultsTab() {
     if (_publishedResults.isEmpty) {
       return const Center(child: Text('No published results'));
@@ -343,7 +343,7 @@ class _AdminResultsApprovalPageState extends State<AdminResultsApprovalPage>
     );
   }
 
-  // Show result details
+  //! دي الفنكشن اللي بتعرض تفاصيل النتيجة لما ندوس عليها
   void _showResultDetails(Map<String, dynamic> result) {
     final studentId = result['studentId'];
     final studentName = result['studentName'] ?? 'Student $studentId';

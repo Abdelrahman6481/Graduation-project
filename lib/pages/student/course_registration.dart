@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 class CourseRegistration extends StatefulWidget {
   final String? studentId;
@@ -97,13 +98,17 @@ class _CourseRegistrationState extends State<CourseRegistration> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading courses: $e');
+      if (kDebugMode) {
+        debugPrint('Error loading courses: $e');
+      }
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading courses: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading courses: $e')));
+      }
     }
   }
 
@@ -505,36 +510,42 @@ class _CourseRegistrationState extends State<CourseRegistration> {
         }
       }
 
-      // Close loading dialog
-      Navigator.of(context).pop();
+      if (mounted) {
+        // Close loading dialog
+        Navigator.of(context).pop();
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Courses registered successfully! They will now appear in your schedule.',
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Courses registered successfully! They will now appear in your schedule.',
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
           ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
-        ),
-      );
+        );
+      }
 
       // Clear selected courses
       setState(() {
         _selectedCourses.clear();
       });
     } catch (e) {
-      // Close loading dialog
-      Navigator.of(context).pop();
+      if (mounted) {
+        // Close loading dialog
+        Navigator.of(context).pop();
 
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to register courses: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      print('Error registering courses: $e');
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to register courses: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      if (kDebugMode) {
+        debugPrint('Error registering courses: $e');
+      }
     }
   }
 }

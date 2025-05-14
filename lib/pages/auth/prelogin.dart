@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cic_hub/pages/student/home.dart';
 import 'login.dart';
-import 'instructor_login.dart';
 
 class PreLoginPage extends StatelessWidget {
   const PreLoginPage({super.key});
@@ -20,7 +19,7 @@ class PreLoginPage extends StatelessWidget {
               width: 300,
               height: 300,
               decoration: BoxDecoration(
-                color: Colors.red.shade900.withOpacity(0.1),
+                color: Colors.red.shade900.withAlpha(25),
                 shape: BoxShape.circle,
               ),
             ),
@@ -32,7 +31,7 @@ class PreLoginPage extends StatelessWidget {
               width: 200,
               height: 200,
               decoration: BoxDecoration(
-                color: Colors.red.shade900.withOpacity(0.1),
+                color: Colors.red.shade900.withAlpha(25),
                 shape: BoxShape.circle,
               ),
             ),
@@ -70,7 +69,7 @@ class PreLoginPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withAlpha(25),
                 spreadRadius: 10,
                 blurRadius: 20,
                 offset: const Offset(0, 10),
@@ -180,14 +179,14 @@ class PreLoginPage extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withAlpha(25),
               spreadRadius: 5,
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
           ],
           border: Border.all(
-            color: Colors.red.shade900.withOpacity(0.1),
+            color: Colors.red.shade900.withAlpha(25),
             width: 2,
           ),
         ),
@@ -210,26 +209,6 @@ class PreLoginPage extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildLoginButton(BuildContext context) {
-    return SizedBox(
-      height: 60,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.pushNamed(context, '/login');
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.shade900,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        icon: const Icon(Icons.login),
-        label: const Text('Login to System', style: TextStyle(fontSize: 18)),
       ),
     );
   }

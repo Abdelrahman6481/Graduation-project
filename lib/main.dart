@@ -3,12 +3,13 @@ import 'package:flutter/services.dart'; // ?مكتبة التحكم في الن�
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'pages/auth/splash_screen.dart'; // ? استدعاء شاشة السبللاش
 import 'pages/auth/login.dart';
 import 'pages/auth/prelogin.dart';
 import 'pages/student/home.dart';
 import 'pages/auth/instructor_login.dart';
-import 'pages/instructor/instructor_home.dart';
+// استيراد InstructorHomePage تم إزالته لأنه غير مستخدم
 import 'pages/admin/admin_home.dart';
 import 'services/firestore_service.dart';
 
@@ -29,11 +30,16 @@ Future<void> createNewAdmin() async {
       'lastLogin': FieldValue.serverTimestamp(),
     });
 
-    print('NEW ADMIN CREATED: $adminId');
-    print('Email: directadmin@example.com');
-    print('Password: admin123');
+    // استخدام طريقة آمنة للتسجيل تعمل فقط في وضع التصحيح
+    if (kDebugMode) {
+      debugPrint('NEW ADMIN CREATED: $adminId');
+      debugPrint('Email: directadmin@example.com');
+      debugPrint('Password: admin123');
+    }
   } catch (e) {
-    print('Error creating new admin: $e');
+    if (kDebugMode) {
+      debugPrint('Error creating new admin: $e');
+    }
   }
 }
 
@@ -44,9 +50,13 @@ Future<void> testFirebaseConnection() async {
       name: 'app_opened',
       parameters: {'test_time': DateTime.now().toString()},
     );
-    print('Firebase connection test successful!');
+    if (kDebugMode) {
+      debugPrint('Firebase connection test successful!');
+    }
   } catch (e) {
-    print('Firebase connection test failed: $e');
+    if (kDebugMode) {
+      debugPrint('Firebase connection test failed: $e');
+    }
   }
 }
 
@@ -66,9 +76,13 @@ Future<void> addSpecificStudent() async {
       major: 'Computer Science',
       gpa: 0.0,
     );
-    print('Specific student added successfully');
+    if (kDebugMode) {
+      debugPrint('Specific student added successfully');
+    }
   } catch (e) {
-    print('Error adding specific student: $e');
+    if (kDebugMode) {
+      debugPrint('Error adding specific student: $e');
+    }
   }
 }
 

@@ -19,18 +19,18 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
   String _selectedSemester = 'Fall';
   final int _currentYear = DateTime.now().year;
 
-  // Controllers for grade inputs
+  //! دي الكنترولرز اللي هنستخدمها عشان ندخل الدرجات
   final TextEditingController _midtermController = TextEditingController();
   final TextEditingController _finalController = TextEditingController();
   final TextEditingController _courseworkController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
-  // Maximum grades
+  //! دي أقصى درجة ممكن الطالب ياخدها في كل جزء
   final double _maxMidterm = 20.0;
   final double _maxFinal = 50.0;
   final double _maxCoursework = 30.0;
 
-  // Current grades
+  //! دي الدرجات اللي هيدخلها المدرس للطالب
   double _midtermGrade = 0.0;
   double _finalGrade = 0.0;
   double _courseworkGrade = 0.0;
@@ -82,20 +82,20 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
   }
 
   void _calculateGrades() {
-    // Parse input values
+    //! هنحول القيم اللي دخلها المدرس من نص لأرقام
     _midtermGrade = double.tryParse(_midtermController.text) ?? 0.0;
     _finalGrade = double.tryParse(_finalController.text) ?? 0.0;
     _courseworkGrade = double.tryParse(_courseworkController.text) ?? 0.0;
 
-    // Ensure grades don't exceed maximums
+    //! هنتأكد إن الدرجات مش أكبر من الحد الأقصى
     _midtermGrade = _midtermGrade.clamp(0, _maxMidterm);
     _finalGrade = _finalGrade.clamp(0, _maxFinal);
     _courseworkGrade = _courseworkGrade.clamp(0, _maxCoursework);
 
-    // Calculate total grade
+    //! هنحسب الدرجة الكلية للطالب
     _totalGrade = _midtermGrade + _finalGrade + _courseworkGrade;
 
-    // Determine letter grade
+    //! هنحدد التقدير بتاع الطالب (A, B, C, ...)
     if (_totalGrade >= 90) {
       _letterGrade = 'A';
     } else if (_totalGrade >= 80) {
@@ -111,6 +111,7 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
     setState(() {});
   }
 
+  //! هنحفظ الدرجات في الفايرستور عشان الأدمن يراجعها
   Future<void> _saveGrades() async {
     if (_selectedStudentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -135,7 +136,7 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
         midtermGrade: _midtermGrade,
         finalGrade: _finalGrade,
         assignmentsGrade: _courseworkGrade,
-        participationGrade: 0.0, // Not used in this form
+        participationGrade: 0.0, //! Not used in this form
         notes: _notesController.text,
         instructorId: widget.instructor?['id']?.toString() ?? '',
         instructorName: widget.instructor?['name']?.toString() ?? '',
@@ -155,7 +156,7 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
           ),
         );
 
-        // Reset form
+        //! هنعمل ريسيت للفورم بعد ما نحفظ الدرجات
         _midtermController.clear();
         _finalController.clear();
         _courseworkController.clear();
@@ -223,7 +224,7 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
                 setState(() {
                   _selectedStudentId = value;
 
-                  // Reset grade fields when student changes
+                  //! هنعمل ريسيت للدرجات لما نغير الطالب
                   _midtermController.clear();
                   _finalController.clear();
                   _courseworkController.clear();
@@ -232,7 +233,7 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
                   _letterGrade = 'F';
                 });
 
-                // Check if student already has grades for this course
+                //! هنشوف لو الطالب ده عنده درجات قبل كده في المادة دي
                 if (value != null) {
                   try {
                     final courseId =
@@ -241,7 +242,7 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
                         .getStudentResult(value, courseId);
 
                     if (existingResult != null) {
-                      // Pre-fill form with existing grades
+                      //! هنملي الفورم بالدرجات الموجودة من قبل
                       setState(() {
                         _midtermController.text =
                             existingResult['midtermGrade']?.toString() ?? '0';
@@ -254,7 +255,7 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
                         _selectedSemester =
                             existingResult['semester'] ?? 'Fall';
 
-                        // Calculate total
+                        //! هنحسب المجموع الكلي للدرجات
                         _calculateGrades();
                       });
 
@@ -270,7 +271,7 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
                       }
                     }
                   } catch (e) {
-                    // Error silently handled
+                    //! هنتجاهل الإيرور هنا عشان مش مهم للمستخدم
                   }
                 }
               },

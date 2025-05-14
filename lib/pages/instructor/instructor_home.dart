@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
-import '../../models/firestore_models.dart';
 import 'grade_entry_form.dart';
+import 'package:flutter/foundation.dart';
 
 class InstructorHomePage extends StatefulWidget {
   final Map<String, dynamic> instructor;
 
-  const InstructorHomePage({Key? key, required this.instructor})
-    : super(key: key);
+  const InstructorHomePage({super.key, required this.instructor});
 
   @override
   State<InstructorHomePage> createState() => _InstructorHomePageState();
@@ -17,7 +16,6 @@ class InstructorHomePage extends StatefulWidget {
 class _InstructorHomePageState extends State<InstructorHomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final FirestoreService _firestoreService = FirestoreService();
   bool _isLoading = true;
   List<Map<String, dynamic>> _assignedCourses = [];
   Map<String, List<Map<String, dynamic>>> _scheduleByday = {};
@@ -110,7 +108,9 @@ class _InstructorHomePageState extends State<InstructorHomePage>
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading assigned courses: $e');
+      if (kDebugMode) {
+        debugPrint('Error loading assigned courses: $e');
+      }
       setState(() {
         _isLoading = false;
       });
@@ -785,7 +785,7 @@ class _InstructorHomePageState extends State<InstructorHomePage>
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: gradeColor.withOpacity(0.2),
+                          backgroundColor: gradeColor.withAlpha(51),
                           child: Text(
                             letterGrade,
                             style: TextStyle(
@@ -814,8 +814,8 @@ class _InstructorHomePageState extends State<InstructorHomePage>
                               decoration: BoxDecoration(
                                 color:
                                     isPublished
-                                        ? Colors.green.withOpacity(0.2)
-                                        : Colors.grey.withOpacity(0.2),
+                                        ? Colors.green.withAlpha(51)
+                                        : Colors.grey.withAlpha(51),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/firestore_models.dart';
+import 'package:flutter/foundation.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -46,7 +47,9 @@ class FirestoreService {
       final doc = await _firestore.collection('admins').doc(docId).get();
       return doc.exists ? Admin.fromMap(doc.data()!) : null;
     } catch (e) {
-      print('Error getting admin: $e');
+      if (kDebugMode) {
+        debugPrint('Error getting admin: $e');
+      }
       rethrow;
     }
   }

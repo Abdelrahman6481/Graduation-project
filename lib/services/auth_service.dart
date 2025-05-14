@@ -1,15 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/firestore_models.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
-      print('Attempting login with email: $email');
-
-      // Try admin login first
-      print('Checking admin collection...');
+      if (kDebugMode) {
+        debugPrint('Attempting login with email: $email');
+        // Try admin login first
+        debugPrint('Checking admin collection...');
+      }
       final adminSnapshot =
           await _firestore
               .collection('admins')
@@ -17,26 +19,38 @@ class AuthService {
               .limit(1)
               .get();
 
-      print('Admin query result: ${adminSnapshot.docs.length} documents found');
+      if (kDebugMode) {
+        debugPrint(
+          'Admin query result: ${adminSnapshot.docs.length} documents found',
+        );
+      }
       if (adminSnapshot.docs.isNotEmpty) {
         final adminDoc = adminSnapshot.docs.first;
         final adminData = adminDoc.data();
-        print('Admin document found: $adminData');
+        if (kDebugMode) {
+          debugPrint('Admin document found: $adminData');
+        }
 
         if (adminData['password'] == password) {
-          print('Admin password matches');
-          final admin = Admin.fromMap(adminData);
+          if (kDebugMode) {
+            debugPrint('Admin password matches');
+          }
+          // Admin.fromMap is not used, so we can remove it
           await adminDoc.reference.update({
             'lastLogin': FieldValue.serverTimestamp(),
           });
           return {'success': true, 'userType': 'admin', 'userData': adminData};
         } else {
-          print('Admin password does not match');
+          if (kDebugMode) {
+            debugPrint('Admin password does not match');
+          }
         }
       }
 
       // Try student login
-      print('Checking student collection...');
+      if (kDebugMode) {
+        debugPrint('Checking student collection...');
+      }
       final studentSnapshot =
           await _firestore
               .collection('students')
@@ -44,17 +58,23 @@ class AuthService {
               .limit(1)
               .get();
 
-      print(
-        'Student query result: ${studentSnapshot.docs.length} documents found',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'Student query result: ${studentSnapshot.docs.length} documents found',
+        );
+      }
       if (studentSnapshot.docs.isNotEmpty) {
         final studentDoc = studentSnapshot.docs.first;
         final studentData = studentDoc.data();
-        print('Student document found: $studentData');
+        if (kDebugMode) {
+          debugPrint('Student document found: $studentData');
+        }
 
         if (studentData['password'] == password) {
-          print('Student password matches');
-          final student = Student.fromMap(studentData);
+          if (kDebugMode) {
+            debugPrint('Student password matches');
+          }
+          // Student.fromMap is not used, so we can remove it
           await studentDoc.reference.update({
             'lastLogin': FieldValue.serverTimestamp(),
           });
@@ -64,15 +84,21 @@ class AuthService {
             'userData': studentData,
           };
         } else {
-          print('Student password does not match');
+          if (kDebugMode) {
+            debugPrint('Student password does not match');
+          }
         }
       }
 
-      print('Login failed - no matching user found');
+      if (kDebugMode) {
+        debugPrint('Login failed - no matching user found');
+      }
       return {'success': false, 'message': 'Invalid email or password'};
     } catch (e, stackTrace) {
-      print('Error during login: $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        debugPrint('Error during login: $e');
+        debugPrint('Stack trace: $stackTrace');
+      }
       return {
         'success': false,
         'message': 'An error occurred during login: ${e.toString()}',
@@ -83,7 +109,9 @@ class AuthService {
   // Check if email exists in either collection
   Future<bool> emailExists(String email) async {
     try {
-      print('Checking if email exists: $email');
+      if (kDebugMode) {
+        debugPrint('Checking if email exists: $email');
+      }
 
       final adminSnapshot =
           await _firestore
@@ -93,7 +121,9 @@ class AuthService {
               .get();
 
       if (adminSnapshot.docs.isNotEmpty) {
-        print('Email found in admin collection');
+        if (kDebugMode) {
+          debugPrint('Email found in admin collection');
+        }
         return true;
       }
 
@@ -105,15 +135,21 @@ class AuthService {
               .get();
 
       if (studentSnapshot.docs.isNotEmpty) {
-        print('Email found in student collection');
+        if (kDebugMode) {
+          debugPrint('Email found in student collection');
+        }
         return true;
       }
 
-      print('Email not found in any collection');
+      if (kDebugMode) {
+        debugPrint('Email not found in any collection');
+      }
       return false;
     } catch (e, stackTrace) {
-      print('Error checking email existence: $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        debugPrint('Error checking email existence: $e');
+        debugPrint('Stack trace: $stackTrace');
+      }
       return false;
     }
   }
@@ -121,7 +157,9 @@ class AuthService {
   // Get user by email
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
     try {
-      print('Getting user by email: $email');
+      if (kDebugMode) {
+        debugPrint('Getting user by email: $email');
+      }
 
       // Check admin collection
       final adminSnapshot =
@@ -132,7 +170,9 @@ class AuthService {
               .get();
 
       if (adminSnapshot.docs.isNotEmpty) {
-        print('User found in admin collection');
+        if (kDebugMode) {
+          debugPrint('User found in admin collection');
+        }
         return {'type': 'admin', 'data': adminSnapshot.docs.first.data()};
       }
 
@@ -145,15 +185,21 @@ class AuthService {
               .get();
 
       if (studentSnapshot.docs.isNotEmpty) {
-        print('User found in student collection');
+        if (kDebugMode) {
+          debugPrint('User found in student collection');
+        }
         return {'type': 'student', 'data': studentSnapshot.docs.first.data()};
       }
 
-      print('User not found in any collection');
+      if (kDebugMode) {
+        debugPrint('User not found in any collection');
+      }
       return null;
     } catch (e, stackTrace) {
-      print('Error getting user by email: $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        debugPrint('Error getting user by email: $e');
+        debugPrint('Stack trace: $stackTrace');
+      }
       return null;
     }
   }

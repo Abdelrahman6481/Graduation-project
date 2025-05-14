@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // مكتبة التحكم في النظام
 import 'dart:async'; // لإضافة التأخير
-import 'prelogin.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

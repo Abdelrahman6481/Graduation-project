@@ -3,7 +3,7 @@ import '../../services/firestore_service.dart';
 import '../instructor/instructor_home.dart';
 
 class InstructorLoginPage extends StatefulWidget {
-  const InstructorLoginPage({Key? key}) : super(key: key);
+  const InstructorLoginPage({super.key});
 
   @override
   State<InstructorLoginPage> createState() => _InstructorLoginPageState();

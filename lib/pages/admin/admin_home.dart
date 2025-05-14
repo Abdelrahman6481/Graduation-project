@@ -3,12 +3,13 @@ import '../../services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import '../../models/firestore_models.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
+// استيراد firestore_models.dart تم إزالته لأنه غير مستخدم
 import 'admin_support_tickets.dart';
 
 class AdminHomePage extends StatefulWidget {
   final Map<String, dynamic> admin;
-  const AdminHomePage({Key? key, required this.admin}) : super(key: key);
+  const AdminHomePage({super.key, required this.admin});
 
   @override
   State<AdminHomePage> createState() => _AdminHomePageState();
@@ -16,6 +17,18 @@ class AdminHomePage extends StatefulWidget {
 
 class _AdminHomePageState extends State<AdminHomePage>
     with SingleTickerProviderStateMixin {
+  // دالة مساعدة لعرض رسائل Snackbar بطريقة آمنة
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: isError ? Colors.red : null,
+        ),
+      );
+    }
+  }
+
   late TabController _tabController;
   final _formKey = GlobalKey<FormState>();
   List<Map<String, dynamic>> _students = [];
@@ -71,7 +84,7 @@ class _AdminHomePageState extends State<AdminHomePage>
   ];
 
   // Add lecture-related variables
-  List<Map<String, TextEditingController>> _lectureControllers = [];
+  final List<Map<String, TextEditingController>> _lectureControllers = [];
   final List<String> _weekDays = [
     'Monday',
     'Tuesday',
@@ -169,14 +182,18 @@ class _AdminHomePageState extends State<AdminHomePage>
         _isLoading = false;
       });
 
-      print('Loaded ${loadedStudents.length} students');
+      if (kDebugMode) {
+        debugPrint('Loaded ${loadedStudents.length} students');
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading students: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading students: $e')));
+      }
     }
   }
 
@@ -203,9 +220,11 @@ class _AdminHomePageState extends State<AdminHomePage>
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading courses: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading courses: $e')));
+      }
     }
   }
 
@@ -242,9 +261,11 @@ class _AdminHomePageState extends State<AdminHomePage>
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading announcements: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading announcements: $e')),
+        );
+      }
     }
   }
 
@@ -268,14 +289,18 @@ class _AdminHomePageState extends State<AdminHomePage>
         _isLoading = false;
       });
 
-      print('Loaded ${loadedInstructors.length} instructors');
+      if (kDebugMode) {
+        debugPrint('Loaded ${loadedInstructors.length} instructors');
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading instructors: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading instructors: $e')),
+        );
+      }
     }
   }
 
@@ -304,9 +329,7 @@ class _AdminHomePageState extends State<AdminHomePage>
         gpa: double.parse(_gpaController.text),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Student added successfully!')),
-      );
+      _showSnackBar('Student added successfully!');
 
       // Clear the form
       _idController.clear();
@@ -324,9 +347,7 @@ class _AdminHomePageState extends State<AdminHomePage>
       // Refresh the student list
       await _loadStudents();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error adding student: $e')));
+      _showSnackBar('Error adding student: $e', isError: true);
     } finally {
       setState(() {
         _isLoading = false;
@@ -341,22 +362,16 @@ class _AdminHomePageState extends State<AdminHomePage>
           .doc(studentId)
           .update({'isBanned': !currentStatus});
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            currentStatus
-                ? 'Student unbanned successfully!'
-                : 'Student banned successfully!',
-          ),
-        ),
+      _showSnackBar(
+        currentStatus
+            ? 'Student unbanned successfully!'
+            : 'Student banned successfully!',
       );
 
       // Refresh the student list
       await _loadStudents();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating student status: $e')),
-      );
+      _showSnackBar('Error updating student status: $e', isError: true);
     }
   }
 
@@ -374,15 +389,9 @@ class _AdminHomePageState extends State<AdminHomePage>
             'address': 'Admin HQ',
             'lastLogin': FieldValue.serverTimestamp(),
           });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Admin m81l0WRZ8eaySsaoY83AaGlNh733 added!'),
-        ),
-      );
+      _showSnackBar('Admin m81l0WRZ8eaySsaoY83AaGlNh733 added!');
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: ' + e.toString())));
+      _showSnackBar('Error: ${e.toString()}', isError: true);
     }
   }
 
@@ -2362,7 +2371,7 @@ class _AdminHomePageState extends State<AdminHomePage>
                           });
                         },
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ),

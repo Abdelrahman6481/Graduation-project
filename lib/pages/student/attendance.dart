@@ -6,6 +6,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 class AttendancePage extends StatefulWidget {
   final Map<String, dynamic>? student;
@@ -72,7 +73,9 @@ class _AttendancePageState extends State<AttendancePage> {
         _loadTestData();
       }
     } catch (e) {
-      print('Error loading attendance data: $e');
+      if (kDebugMode) {
+        debugPrint('Error loading attendance data: $e');
+      }
       _loadingError =
           'Failed to load attendance data: ${e.toString().substring(0, Math.min(100, e.toString().length))}';
       _useTestData = true;
@@ -231,7 +234,9 @@ class _AttendancePageState extends State<AttendancePage> {
                 });
               },
               onError: (error) {
-                print('Error in attendance stream: $error');
+                if (kDebugMode) {
+                  debugPrint('Error in attendance stream: $error');
+                }
                 if (mounted) {
                   setState(() {
                     _loadingError = 'Error loading attendance data: $error';
@@ -254,13 +259,17 @@ class _AttendancePageState extends State<AttendancePage> {
           });
         }
       } catch (e) {
-        print('Error loading registrations: $e');
+        if (kDebugMode) {
+          debugPrint('Error loading registrations: $e');
+        }
         _useTestData = true;
         _loadTestData();
         return;
       }
     } catch (e) {
-      print('Error in student data load: $e');
+      if (kDebugMode) {
+        debugPrint('Error in student data load: $e');
+      }
       _useTestData = true;
       _loadTestData();
     }
@@ -389,7 +398,9 @@ class _AttendancePageState extends State<AttendancePage> {
             ),
           );
         } catch (e) {
-          print('Error processing course $courseId: $e');
+          if (kDebugMode) {
+            debugPrint('Error processing course $courseId: $e');
+          }
         }
       }
 
@@ -399,7 +410,9 @@ class _AttendancePageState extends State<AttendancePage> {
         return;
       }
     } catch (e) {
-      print('Error in instructor data load: $e');
+      if (kDebugMode) {
+        debugPrint('Error in instructor data load: $e');
+      }
       _useTestData = true;
       _loadTestData();
     }
@@ -416,7 +429,9 @@ class _AttendancePageState extends State<AttendancePage> {
 
       return snapshot.docs.length;
     } catch (e) {
-      print('Error counting enrolled students: $e');
+      if (kDebugMode) {
+        debugPrint('Error counting enrolled students: $e');
+      }
       return 0;
     }
   }
@@ -488,7 +503,7 @@ class _AttendancePageState extends State<AttendancePage> {
         List<CourseAttendance> fetchedCourses = [];
 
         for (var courseDoc in coursesSnapshot.docs) {
-          if (!courseDoc.exists || courseDoc.data() == null) continue;
+          if (!courseDoc.exists) continue;
 
           final courseData = courseDoc.data();
           final courseId = int.tryParse(courseDoc.id) ?? 0;
@@ -561,7 +576,9 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             );
           } catch (e) {
-            print('Error getting course details: $e');
+            if (kDebugMode) {
+              debugPrint('Error getting course details: $e');
+            }
           }
         }
 
@@ -582,7 +599,9 @@ class _AttendancePageState extends State<AttendancePage> {
         _loadingError = 'No courses found in the database.';
       });
     } catch (e) {
-      print('Error loading data from Firestore: $e');
+      if (kDebugMode) {
+        debugPrint('Error loading data from Firestore: $e');
+      }
       setState(() {
         _courses = [];
         _isLoading = false;
@@ -659,8 +678,7 @@ class _AttendancePageState extends State<AttendancePage> {
                     .limit(1)
                     .get();
 
-            if (instructorsQuery.docs.isNotEmpty &&
-                instructorsQuery.docs.first.data() != null) {
+            if (instructorsQuery.docs.isNotEmpty) {
               final data = instructorsQuery.docs.first.data();
               for (String field in [
                 'name',

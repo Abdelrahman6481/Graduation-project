@@ -30,7 +30,7 @@ class _ResultsPageState extends State<ResultsPage>
   @override
   void initState() {
     super.initState();
-    // Initialize TabController with a default of 1 tab to avoid late initialization error
+    //! هنعمل تاب كنترولر بتاب واحد في الأول عشان نتجنب إيرور الـ late initialization
     _tabController = TabController(length: 1, vsync: this);
     _loadStudentData();
   }
@@ -41,7 +41,7 @@ class _ResultsPageState extends State<ResultsPage>
     });
 
     try {
-      // Get student ID - first check if passed in widget, otherwise use shared preferences
+      //! هنجيب الـ ID بتاع الطالب - لو موجود في الـ widget هناخده، لو مش موجود هنجيبه من الـ shared preferences
       if (widget.student != null && widget.student!['id'] != null) {
         _studentId = int.tryParse(widget.student!['id'].toString()) ?? 0;
         _studentName = widget.student!['name']?.toString() ?? 'Student';
@@ -58,7 +58,7 @@ class _ResultsPageState extends State<ResultsPage>
         return;
       }
 
-      // Get student data from Firestore
+      //! هنجيب بيانات الطالب من الفايرستور
       final student = await _firestoreService.getStudent(_studentId);
       if (student == null) {
         setState(() {
@@ -67,33 +67,33 @@ class _ResultsPageState extends State<ResultsPage>
         return;
       }
 
-      // Step 1: Try to get real-time published results from studentResults collection
+      //! الخطوة الأولى: هنحاول نجيب النتايج المنشورة من كوليكشن studentResults
       final publishedResults = await _firestoreService
           .getStudentAcademicResults(_studentId);
 
-      // Create a map to organize results by semester
+      //! هنعمل ماب عشان ننظم النتايج حسب الترم
       Map<String, List<Map<String, dynamic>>> resultsBySemester = {};
 
-      // Process published results from studentResults collection
+      //! هنجهز النتايج المنشورة من كوليكشن studentResults
       if (publishedResults.isNotEmpty) {
         for (var result in publishedResults) {
-          // Only include published results
+          // هنشوف بس النتايج اللي اتنشرت فعلاً
           if (result['isPublished'] != true) continue;
 
-          // Format the semester identifier with academic year
+          //! هنعمل فورمات للترم مع السنة الدراسية
           String semester = '${result['semester']} ${result['academicYear']}';
           if (!resultsBySemester.containsKey(semester)) {
             resultsBySemester[semester] = [];
           }
 
-          // Get course details
+          //! هنجيب تفاصيل المادة
           final courseId = int.tryParse(result['courseId'].toString()) ?? 0;
           String courseName = result['courseName'] ?? 'Unknown Course';
           String courseCode = result['courseCode'] ?? '';
           int courseCredits =
               int.tryParse(result['courseCredits'].toString()) ?? 0;
 
-          // Convert Firestore result to appropriate format
+          //! هنحول نتيجة الفايرستور للفورمات المناسب
           resultsBySemester[semester]!.add({
             'course': courseName,
             'code': courseCode,
@@ -111,10 +111,10 @@ class _ResultsPageState extends State<ResultsPage>
         }
       }
 
-      // Step 2: If no published results found or as a backup, try student.academicResults
+      //! الخطوة التانية: لو مفيش نتايج منشورة أو كباك أب، هنجرب نجيب من student.academicResults
       final academicResults = student.academicResults ?? [];
       if (resultsBySemester.isEmpty && academicResults.isNotEmpty) {
-        // Process results from student.academicResults
+        //! هنجهز النتايج من student.academicResults
         for (var result in academicResults) {
           String semester = '${result['semester']} ${result['academicYear']}';
           if (!resultsBySemester.containsKey(semester)) {
@@ -134,40 +134,42 @@ class _ResultsPageState extends State<ResultsPage>
         }
       }
 
-      // Update state with results and calculate stats
+      //! هنحدث الستيت بالنتايج ونحسب الإحصائيات
       setState(() {
         _results = resultsBySemester;
         _semesters =
-            resultsBySemester.keys.toList()
-              ..sort((a, b) => b.compareTo(a)); // Sort newest first
+            resultsBySemester.keys.toList()..sort(
+              (a, b) => b.compareTo(a),
+            ); //! هنرتب الترمات بحيث الأحدث يكون الأول
 
         if (student.gpa > 0) {
-          // Use student record if available
+          //! هنستخدم بيانات الطالب لو موجودة
           _cgpa = student.gpa;
           _totalCredits = student.credits;
           _totalPoints = student.totalPoints.toDouble();
         } else {
-          // Calculate from results if student record doesn't have GPA
+          //! هنحسب من النتايج لو بيانات الطالب مفيهاش GPA
           _calculateOverallStats();
         }
 
         _isLoading = false;
       });
 
-      // Update the tab controller with the correct number of tabs
+      //! هنحدث التاب كنترولر بالعدد الصحيح للتابات
       if (mounted) {
         setState(() {
-          // Always ensure we have at least 1 tab, even if there are no semesters
+          //! هنتأكد إن عندنا تاب واحد على الأقل، حتى لو مفيش ترمات
           final int tabCount = _semesters.isNotEmpty ? _semesters.length : 1;
 
-          // Dispose the old controller before creating a new one
+          //! هنتخلص من الكنترولر القديم قبل ما نعمل واحد جديد
           _tabController.dispose();
 
-          // Create a new controller with the correct number of tabs
+          //! هنعمل كنترولر جديد بالعدد الصحيح للتابات
           _tabController = TabController(length: tabCount, vsync: this);
         });
       }
     } catch (e) {
+      //! حصل إيرور في تحميل نتايج الطالب
       print('Error loading student results: $e');
       setState(() {
         _isLoading = false;
@@ -175,6 +177,7 @@ class _ResultsPageState extends State<ResultsPage>
     }
   }
 
+  //! دي الفنكشن اللي بتحسب الإحصائيات الكلية للطالب (المعدل التراكمي والساعات المعتمدة)
   void _calculateOverallStats() {
     double totalPoints = 0;
     int totalCredits = 0;
@@ -194,6 +197,7 @@ class _ResultsPageState extends State<ResultsPage>
     });
   }
 
+  //! دي الفنكشن اللي بتحول التقدير (A, B, C) لنقاط (4.0, 3.0, 2.0)
   double _getGradePoints(String grade) {
     switch (grade) {
       case 'A':
@@ -285,6 +289,7 @@ class _ResultsPageState extends State<ResultsPage>
     );
   }
 
+  //! دي الفنكشن اللي بتبني تابات الترمات
   Widget _buildSemesterTabs() {
     return Container(
       color: Colors.red.shade900,
@@ -309,6 +314,7 @@ class _ResultsPageState extends State<ResultsPage>
     );
   }
 
+  //! دي الفنكشن اللي بتبني جزء المعدل التراكمي
   Widget _buildCGPA() {
     return Container(
       width: double.infinity,
@@ -366,6 +372,7 @@ class _ResultsPageState extends State<ResultsPage>
     );
   }
 
+  // دي الفنكشن اللي بتبني معلومات المعدل التراكمي (الساعات والنقاط)
   Widget _buildCGPAInfo(String label, String value) {
     return Column(
       children: [
@@ -386,6 +393,7 @@ class _ResultsPageState extends State<ResultsPage>
     );
   }
 
+  // دي الفنكشن اللي بتبني قائمة النتايج للترم
   Widget _buildResultsList(String semester) {
     List<Map<String, dynamic>>? semesterResults = _results[semester];
 
@@ -408,6 +416,7 @@ class _ResultsPageState extends State<ResultsPage>
     );
   }
 
+  // دي الفنكشن اللي بتبني ملخص الترم (المعدل الفصلي والساعات)
   Widget _buildSemesterSummary(List<Map<String, dynamic>> results) {
     double totalPoints = 0;
     int totalCredits = 0;
@@ -474,8 +483,9 @@ class _ResultsPageState extends State<ResultsPage>
     );
   }
 
+  //! دي الفنكشن اللي بتبني كارت النتيجة لكل مادة
   Widget _buildResultCard(Map<String, dynamic> result) {
-    // Check if this is a recently published result (within the last 7 days)
+    //! هنشوف لو النتيجة دي اتنشرت حديثاً (خلال آخر 7 أيام)
     bool isRecentlyPublished = false;
     if (result['publishedDate'] != null) {
       try {
@@ -486,6 +496,7 @@ class _ResultsPageState extends State<ResultsPage>
           isRecentlyPublished = difference.inDays < 7;
         }
       } catch (e) {
+        //! حصل إيرور في التحقق من تاريخ النشر
         print('Error checking publish date: $e');
       }
     }
@@ -590,8 +601,9 @@ class _ResultsPageState extends State<ResultsPage>
     );
   }
 
+  //! دي الفنكشن اللي بتعرض تفاصيل النتيجة لما ندوس على الكارت
   void _showResultDetails(Map<String, dynamic> result) {
-    // Format the publish date if it exists
+    //! هنعمل فورمات لتاريخ النشر لو موجود
     String publishDate = '';
     if (result['publishedDate'] != null) {
       try {
@@ -600,6 +612,7 @@ class _ResultsPageState extends State<ResultsPage>
           publishDate = '${date.day}/${date.month}/${date.year}';
         }
       } catch (e) {
+        //! حصل إيرور في فورمات تاريخ النشر
         print('Error formatting publish date: $e');
       }
     }
@@ -655,6 +668,7 @@ class _ResultsPageState extends State<ResultsPage>
     );
   }
 
+  // دي الفنكشن اللي بتبني شكل التقدير (A, B, C) في الكارت
   Widget _buildGradeChip(String grade) {
     Color chipColor;
     if (grade.startsWith('A')) {
@@ -670,9 +684,22 @@ class _ResultsPageState extends State<ResultsPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: chipColor.withOpacity(0.1),
+        color: Color.fromRGBO(
+          chipColor.red,
+          chipColor.green,
+          chipColor.blue,
+          0.1,
+        ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: chipColor.withOpacity(0.5), width: 1),
+        border: Border.all(
+          color: Color.fromRGBO(
+            chipColor.red,
+            chipColor.green,
+            chipColor.blue,
+            0.5,
+          ),
+          width: 1,
+        ),
       ),
       child: Text(
         grade,
@@ -700,6 +727,7 @@ class _ResultsPageState extends State<ResultsPage>
     );
   }
 
+  //! دي الفنكشن اللي بتبني الشاشة الفاضية لما مفيش نتايج
   Widget _buildEmptyState() {
     return Center(
       child: Column(

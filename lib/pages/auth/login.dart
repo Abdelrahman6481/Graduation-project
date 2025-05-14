@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:cic_hub/pages/student/home.dart';
-import 'package:cic_hub/services/auth_service.dart';
-import 'package:cic_hub/models/firestore_models.dart';
 import 'package:cic_hub/pages/admin/admin_home.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../instructor/instructor_home.dart';
@@ -18,7 +15,6 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
   bool _isLoading = false;
   String? _errorMessage;
   String? _debugInfo;
@@ -178,7 +174,7 @@ class _LoginPageState extends State<LoginPage> {
               width: 300,
               height: 300,
               decoration: BoxDecoration(
-                color: Colors.red.shade900.withOpacity(0.1),
+                color: Colors.red.shade900.withAlpha(25),
                 shape: BoxShape.circle,
               ),
             ),
@@ -190,7 +186,7 @@ class _LoginPageState extends State<LoginPage> {
               width: 200,
               height: 200,
               decoration: BoxDecoration(
-                color: Colors.red.shade900.withOpacity(0.1),
+                color: Colors.red.shade900.withAlpha(25),
                 shape: BoxShape.circle,
               ),
             ),
@@ -214,7 +210,7 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
+                              color: Colors.grey.withAlpha(25),
                               spreadRadius: 10,
                               blurRadius: 20,
                               offset: const Offset(0, 10),
@@ -325,7 +321,7 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.red.shade900.withOpacity(0.3),
+                            color: Colors.red.shade900.withAlpha(76),
                             blurRadius: 10,
                             offset: const Offset(0, 5),
                           ),
