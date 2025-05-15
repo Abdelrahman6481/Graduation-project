@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GradeEntryForm extends StatefulWidget {
   final Map<String, dynamic> course;
@@ -499,22 +500,135 @@ class _GradeEntryFormState extends State<GradeEntryForm> {
   }
 
   Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.shade900,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade900,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: _selectedStudentId == null ? null : _saveGrades,
+              child: const Text(
+                'Save Grades',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
         ),
-        onPressed: _selectedStudentId == null ? null : _saveGrades,
-        child: const Text(
-          'Save Grades',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        const SizedBox(width: 16),
+        Expanded(
+          child: SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade800,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed:
+                  _selectedStudentId == null ? null : _submitGradesForApproval,
+              child: const Text(
+                'Submit to Admin',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
         ),
-      ),
+      ],
     );
+  }
+
+  Future<void> _submitGradesForApproval() async {
+    if (_selectedStudentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a student'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Calculate grades one last time to ensure accuracy
+      _calculateGrades();
+
+      final courseId = int.tryParse(widget.course['id'].toString()) ?? 0;
+      final selectedStudent = _students.firstWhere(
+        (student) =>
+            int.tryParse(student['id'].toString()) == _selectedStudentId,
+        orElse: () => {},
+      );
+      final studentName = selectedStudent['name'] ?? 'Unknown Student';
+
+      // Create a batch of grades to submit
+      final gradeData = {
+        'studentId': _selectedStudentId.toString(),
+        'studentName': studentName,
+        'courseId': courseId.toString(),
+        'courseCode': widget.course['code'] ?? 'Unknown Code',
+        'courseName': widget.course['name'] ?? 'Unknown Course',
+        'instructorId': widget.instructor?['id']?.toString() ?? '',
+        'instructorName': widget.instructor?['name']?.toString() ?? '',
+        'submissionDate': FieldValue.serverTimestamp(),
+        'status': 'pending',
+        'semester': _selectedSemester,
+        'academicYear': _currentYear,
+        'grades': {
+          'midterm': _midtermGrade,
+          'final': _finalGrade,
+          'assignments': _courseworkGrade,
+          'total': _totalGrade,
+          'letterGrade': _letterGrade,
+          'notes': _notesController.text,
+        },
+      };
+
+      // Add to Firestore grades collection for admin review
+      await FirebaseFirestore.instance.collection('grades').add(gradeData);
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Grades submitted to admin for approval!',
+              style: TextStyle(fontSize: 16),
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error submitting grades: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override

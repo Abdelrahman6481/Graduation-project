@@ -62,6 +62,16 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Allow read/write access to the payments collection for admins only
+    match /payments/{document=**} {
+      allow read: if isAdmin();
+      // Students can read their own payment status
+      allow read: if request.auth != null && 
+                 resource.data.studentId == request.auth.uid;
+      // Only admins can create or update payment records
+      allow write: if isAdmin();
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;

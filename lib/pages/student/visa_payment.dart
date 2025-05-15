@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class VisaPaymentPage extends StatefulWidget {
   final double amount;
+  final String? studentEmail;
 
-  const VisaPaymentPage({super.key, required this.amount});
+  const VisaPaymentPage({super.key, required this.amount, this.studentEmail});
 
   @override
   State<VisaPaymentPage> createState() => _VisaPaymentPageState();
@@ -19,6 +21,10 @@ class _VisaPaymentPageState extends State<VisaPaymentPage> {
 
   // Card type detection
   CardType _cardType = CardType.unknown;
+
+  // Payment processing state
+  bool _isProcessing = false;
+  bool _isSuccess = false;
 
   @override
   Widget build(BuildContext context) {
@@ -386,27 +392,69 @@ class _VisaPaymentPageState extends State<VisaPaymentPage> {
     );
   }
 
-  void _processPayment() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => Center(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: const CircularProgressIndicator(),
-            ),
-          ),
-    );
-
-    Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pop(context);
-      _showSuccessDialog();
+  void _processPayment() async {
+    // Show loading animation
+    setState(() {
+      _isProcessing = true;
     });
+
+    try {
+      // Simulate payment processing delay
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Get current user ID (assuming it's available in the authentication system)
+      String? studentId;
+      final querySnapshot =
+          await FirebaseFirestore.instance
+              .collection('students')
+              .where('email', isEqualTo: widget.studentEmail ?? '')
+              .limit(1)
+              .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        studentId = querySnapshot.docs.first.id;
+      }
+
+      if (studentId != null) {
+        // Update payment status in the database
+        await FirebaseFirestore.instance
+            .collection('payments')
+            .doc(studentId)
+            .update({
+              'status': 'paid',
+              'amountPaid': widget.amount,
+              'lastUpdated': FieldValue.serverTimestamp(),
+            });
+      }
+
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _isSuccess = true;
+        });
+
+        // Show success dialog after a brief delay
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _showSuccessDialog();
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _isSuccess = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Payment failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showSuccessDialog() {

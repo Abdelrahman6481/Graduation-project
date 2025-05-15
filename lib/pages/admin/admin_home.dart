@@ -6,6 +6,7 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 // استيراد firestore_models.dart تم إزالته لأنه غير مستخدم
 import 'admin_support_tickets.dart';
+import 'admin_finance.dart';
 
 class AdminHomePage extends StatefulWidget {
   final Map<String, dynamic> admin;
@@ -96,10 +97,13 @@ class _AdminHomePageState extends State<AdminHomePage>
   ];
   String _selectedDay = 'Monday';
 
+  // Add pending grades variable
+  List<Map<String, dynamic>> _pendingGrades = [];
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: 9, vsync: this);
     _loadStudents();
     _loadCourses();
     _loadAnnouncements();
@@ -112,8 +116,73 @@ class _AdminHomePageState extends State<AdminHomePage>
         });
       }
     });
+    _loadPendingGrades();
     // Add an initial empty lecture row
     _addLectureRow();
+  }
+
+  // Add a function to load pending grades
+  Future<void> _loadPendingGrades() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final QuerySnapshot snapshot =
+          await FirebaseFirestore.instance
+              .collection('grades')
+              .where('status', isEqualTo: 'pending')
+              .get();
+
+      final List<Map<String, dynamic>> loadedGrades = [];
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        loadedGrades.add({'id': doc.id, ...data});
+      }
+
+      setState(() {
+        _pendingGrades = loadedGrades;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        _showSnackBar('Error loading pending grades: $e', isError: true);
+      }
+    }
+  }
+
+  Future<void> _approveGrade(String gradeId) async {
+    try {
+      await FirebaseFirestore.instance.collection('grades').doc(gradeId).update(
+        {'status': 'approved'},
+      );
+
+      _showSnackBar('Grade approved successfully!');
+
+      // Reload pending grades
+      await _loadPendingGrades();
+    } catch (e) {
+      _showSnackBar('Error approving grade: $e', isError: true);
+    }
+  }
+
+  Future<void> _rejectGrade(String gradeId) async {
+    try {
+      await FirebaseFirestore.instance.collection('grades').doc(gradeId).update(
+        {'status': 'rejected'},
+      );
+
+      _showSnackBar('Grade rejected successfully!');
+
+      // Reload pending grades
+      await _loadPendingGrades();
+    } catch (e) {
+      _showSnackBar('Error rejecting grade: $e', isError: true);
+    }
   }
 
   @override
@@ -644,6 +713,8 @@ class _AdminHomePageState extends State<AdminHomePage>
             Tab(text: 'Announcements', icon: Icon(Icons.announcement)),
             Tab(text: 'Instructors', icon: Icon(Icons.school)),
             Tab(text: 'Support Tickets', icon: Icon(Icons.support)),
+            Tab(text: 'Finance', icon: Icon(Icons.payments_outlined)),
+            Tab(text: 'Pending Grades', icon: Icon(Icons.pending_actions)),
           ],
         ),
       ),
@@ -670,6 +741,12 @@ class _AdminHomePageState extends State<AdminHomePage>
 
           // Tab 7: Support Tickets
           const AdminSupportTicketsPage(),
+
+          // Tab 8: Finance
+          _buildFinanceTab(),
+
+          // Tab 9: Pending Grades
+          _buildPendingGradesTab(),
         ],
       ),
     );
@@ -1497,12 +1574,548 @@ class _AdminHomePageState extends State<AdminHomePage>
     );
   }
 
+  // Method to add a new lecture row
+  void _addLectureRow() {
+    setState(() {
+      _lectureControllers.add({
+        'day': TextEditingController(text: _selectedDay),
+        'time': TextEditingController(),
+        'room': TextEditingController(),
+      });
+    });
+  }
+
+  // Method to remove a lecture row
+  void _removeLectureRow(int index) {
+    setState(() {
+      var controllers = _lectureControllers.removeAt(index);
+      controllers['time']?.dispose();
+      controllers['room']?.dispose();
+    });
+  }
+
+  Widget _buildLecturesTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Add Course Lectures',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Configure lecture schedule for courses',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+
+          // Course selection dropdown
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              labelText: 'Select Course',
+              border: OutlineInputBorder(),
+            ),
+            items:
+                _courses.map((course) {
+                  return DropdownMenuItem<String>(
+                    value: course['id'].toString(),
+                    child: Text('${course['code']} - ${course['name']}'),
+                  );
+                }).toList(),
+            onChanged: (String? courseId) {
+              if (courseId != null) {
+                final course = _courses.firstWhere(
+                  (c) => c['id'].toString() == courseId,
+                  orElse: () => {},
+                );
+                _showManageLecturesDialog(course);
+              }
+            },
+          ),
+
+          const SizedBox(height: 32),
+          const Center(
+            child: Text(
+              'Select a course from the dropdown to manage its lectures',
+              style: TextStyle(fontStyle: FontStyle.italic),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewCoursesTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_courses.isEmpty) {
+      return const Center(child: Text('No courses found'));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _courses.length,
+      itemBuilder: (context, index) {
+        final course = _courses[index];
+        final isActive = course['isActive'] == true;
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      course['name'] ?? 'Unnamed Course',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isActive ? Colors.green[100] : Colors.red[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        isActive ? 'Active' : 'Inactive',
+                        style: TextStyle(
+                          color: isActive ? Colors.green[800] : Colors.red[800],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Course Code: ${course['code'] ?? 'No Code'}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                Text(
+                  'Credits: ${course['credits'] ?? '0'}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                Text(
+                  'Instructor: ${course['instructor'] ?? 'No Instructor'}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Description: ${course['description'] ?? 'No description available'}',
+                  style: TextStyle(color: Colors.grey[700]),
+                ),
+                if (course['lectures'] != null &&
+                    (course['lectures'] as List).isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Lecture Schedule:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...(course['lectures'] as List).map((lecture) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            '${lecture['day'] ?? 'Day'}: ${lecture['time'] ?? 'Time'} @ ${lecture['room'] ?? 'Room'}',
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () async {
+                        // Toggle active status
+                        await FirebaseFirestore.instance
+                            .collection('courses')
+                            .doc(course['id'].toString())
+                            .update({'isActive': !isActive});
+
+                        // Refresh courses
+                        _loadCourses();
+                      },
+                      child: Text(isActive ? 'Deactivate' : 'Activate'),
+                    ),
+                    TextButton(
+                      onPressed: () => _removeCourse(course['id'].toString()),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Remove'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFinanceTab() {
+    return const AdminFinancePage();
+  }
+
+  void _showManageLecturesDialog(Map<String, dynamic> course) {
+    // Create a temporary list of lecture controllers for this dialog
+    final List<Map<String, TextEditingController>> tempLectureControllers = [];
+
+    // Initialize with existing lectures if any
+    final lectures = course['lectures'] as List<dynamic>? ?? [];
+    if (lectures.isNotEmpty) {
+      for (var lecture in lectures) {
+        tempLectureControllers.add({
+          'day': TextEditingController(text: lecture['day'] ?? ''),
+          'time': TextEditingController(text: lecture['time'] ?? ''),
+          'room': TextEditingController(text: lecture['room'] ?? ''),
+        });
+      }
+    } else {
+      // Add at least one empty lecture row
+      tempLectureControllers.add({
+        'day': TextEditingController(text: _selectedDay),
+        'time': TextEditingController(),
+        'room': TextEditingController(),
+      });
+    }
+
+    // Track selected day for each lecture
+    final List<String> selectedDays =
+        tempLectureControllers
+            .map((c) => c['day']?.text ?? _selectedDay)
+            .toList();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Manage Lectures for ${course['name']}'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Display all lecture rows
+                      ...List.generate(tempLectureControllers.length, (index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: Row(
+                            children: [
+                              // Day dropdown
+                              Expanded(
+                                flex: 3,
+                                child: DropdownButtonFormField<String>(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Day',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  value: selectedDays[index],
+                                  items:
+                                      _weekDays.map((String day) {
+                                        return DropdownMenuItem<String>(
+                                          value: day,
+                                          child: Text(day),
+                                        );
+                                      }).toList(),
+                                  onChanged: (String? newValue) {
+                                    setState(() {
+                                      selectedDays[index] = newValue!;
+                                      tempLectureControllers[index]['day']
+                                          ?.text = newValue;
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Time field
+                              Expanded(
+                                flex: 3,
+                                child: TextFormField(
+                                  controller:
+                                      tempLectureControllers[index]['time'],
+                                  decoration: const InputDecoration(
+                                    labelText: 'Time',
+                                    hintText: '9:00-10:30',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Room field
+                              Expanded(
+                                flex: 2,
+                                child: TextFormField(
+                                  controller:
+                                      tempLectureControllers[index]['room'],
+                                  decoration: const InputDecoration(
+                                    labelText: 'Room',
+                                    hintText: 'A101',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    if (tempLectureControllers.length > 1) {
+                                      tempLectureControllers.removeAt(index);
+                                      selectedDays.removeAt(index);
+                                    } else {
+                                      // Clear the fields instead of removing the only row
+                                      tempLectureControllers[index]['time']
+                                          ?.clear();
+                                      tempLectureControllers[index]['room']
+                                          ?.clear();
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+
+                      Center(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add Another Lecture'),
+                          onPressed: () {
+                            setState(() {
+                              tempLectureControllers.add({
+                                'day': TextEditingController(
+                                  text: _selectedDay,
+                                ),
+                                'time': TextEditingController(),
+                                'room': TextEditingController(),
+                              });
+                              selectedDays.add(_selectedDay);
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    // Create the updated lectures list
+                    final List<Map<String, dynamic>> updatedLectures = [];
+                    for (
+                      var index = 0;
+                      index < tempLectureControllers.length;
+                      index++
+                    ) {
+                      var controller = tempLectureControllers[index];
+                      if ((controller['room']?.text.isNotEmpty ?? false) &&
+                          (controller['time']?.text.isNotEmpty ?? false)) {
+                        updatedLectures.add({
+                          'day': controller['day']?.text ?? selectedDays[index],
+                          'time': controller['time']?.text,
+                          'room': controller['room']?.text,
+                        });
+                      }
+                    }
+
+                    try {
+                      // Update course with new lectures
+                      await FirebaseFirestore.instance
+                          .collection('courses')
+                          .doc(course['id'].toString())
+                          .update({'lectures': updatedLectures});
+
+                      _showSnackBar('Lectures updated successfully!');
+
+                      // Reload courses
+                      await _loadCourses();
+                    } catch (e) {
+                      _showSnackBar(
+                        'Error updating lectures: $e',
+                        isError: true,
+                      );
+                    }
+
+                    if (mounted) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((_) {
+      // Clean up temp controllers
+      for (var controller in tempLectureControllers) {
+        controller['day']?.dispose();
+        controller['time']?.dispose();
+        controller['room']?.dispose();
+      }
+    });
+  }
+
+  void _showAssignCourseDialog(Map<String, dynamic> course) {
+    final _selectedStudentIds = <String>[];
+    final List<Map<String, dynamic>> _availableStudents = [..._students];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Assign ${course['name']} to Students'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 400,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        'Select students to enroll in this course',
+                        style: TextStyle(color: Colors.grey[700]),
+                      ),
+                    ),
+                    const Divider(),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: _availableStudents.length,
+                        itemBuilder: (context, index) {
+                          final student = _availableStudents[index];
+                          final studentId = student['id'].toString();
+                          final isSelected = _selectedStudentIds.contains(
+                            studentId,
+                          );
+
+                          return CheckboxListTile(
+                            title: Text(student['name'] ?? 'Unknown'),
+                            subtitle: Text(
+                              'ID: $studentId - Level: ${student['level'] ?? 'N/A'}',
+                            ),
+                            value: isSelected,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedStudentIds.add(studentId);
+                                } else {
+                                  _selectedStudentIds.remove(studentId);
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    if (_selectedStudentIds.isEmpty) {
+                      _showSnackBar(
+                        'Please select at least one student',
+                        isError: true,
+                      );
+                      return;
+                    }
+
+                    try {
+                      final batch = FirebaseFirestore.instance.batch();
+                      final courseId = course['id'].toString();
+
+                      // Add registration for each selected student
+                      for (var studentId in _selectedStudentIds) {
+                        final registrationId = '$studentId-$courseId';
+                        batch.set(
+                          FirebaseFirestore.instance
+                              .collection('registrations')
+                              .doc(registrationId),
+                          {
+                            'studentId': studentId,
+                            'courseId': courseId,
+                            'courseName': course['name'],
+                            'courseCode': course['code'],
+                            'registrationDate': FieldValue.serverTimestamp(),
+                            'status': 'enrolled',
+                            'grades': {
+                              'midterm': null,
+                              'final': null,
+                              'assignments': null,
+                              'total': null,
+                            },
+                          },
+                        );
+                      }
+
+                      await batch.commit();
+                      _showSnackBar(
+                        'Successfully enrolled ${_selectedStudentIds.length} students in ${course['name']}',
+                      );
+                      Navigator.pop(context);
+                    } catch (e) {
+                      _showSnackBar(
+                        'Error enrolling students: $e',
+                        isError: true,
+                      );
+                    }
+                  },
+                  child: const Text('Enroll Selected Students'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildAnnouncementsTab() {
     return DefaultTabController(
       length: 2,
       child: Column(
         children: [
-          // Inner tab bar for Announcements
           TabBar(
             labelColor: Colors.red.shade900,
             tabs: const [
@@ -1510,8 +2123,6 @@ class _AdminHomePageState extends State<AdminHomePage>
               Tab(text: 'Add Announcement'),
             ],
           ),
-
-          // Inner tab views
           Expanded(
             child: TabBarView(
               children: [
@@ -1540,127 +2151,112 @@ class _AdminHomePageState extends State<AdminHomePage>
     return RefreshIndicator(
       onRefresh: _loadAnnouncements,
       child: ListView.builder(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(16),
         itemCount: _announcements.length,
         itemBuilder: (context, index) {
           final announcement = _announcements[index];
-          final DateTime date = announcement['date'];
-          final DateFormat formatter = DateFormat('MMM d, y - h:mm a');
+          final date = announcement['date'] as DateTime?;
+          final isUrgent = announcement['isUrgent'] == true;
 
           return Card(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            margin: const EdgeInsets.only(bottom: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side:
-                  announcement['isUrgent'] == true
-                      ? BorderSide(color: Colors.red.shade300, width: 1.5)
+                  isUrgent
+                      ? BorderSide(color: Colors.red.shade700, width: 2)
                       : BorderSide.none,
             ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              title: Row(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      announcement['title'] ?? 'Unknown',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          announcement['title'] ?? 'Untitled',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
+                      if (isUrgent)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'URGENT',
+                            style: TextStyle(
+                              color: Colors.red.shade800,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
+                      horizontal: 8,
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color:
-                          announcement['isUrgent'] == true
-                              ? Colors.red.shade50
-                              : Colors.grey.shade100,
+                      color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       announcement['category'] ?? 'General',
                       style: TextStyle(
+                        color: Colors.grey.shade800,
                         fontSize: 12,
-                        color:
-                            announcement['isUrgent'] == true
-                                ? Colors.red.shade900
-                                : Colors.grey.shade700,
                       ),
                     ),
                   ),
-                ],
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text(
-                    announcement['content'] ?? '',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14),
+                    announcement['content'] ?? 'No content',
+                    style: const TextStyle(fontSize: 16),
                   ),
                   const SizedBox(height: 12),
+                  Text(
+                    date != null
+                        ? 'Posted on ${DateFormat('MMM d, yyyy - h:mm a').format(date)}'
+                        : 'Date not available',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        formatter.format(date),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
+                      TextButton.icon(
+                        icon: const Icon(Icons.delete, size: 18),
+                        label: const Text('Remove'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
                         ),
+                        onPressed:
+                            () => _removeAnnouncement(announcement['id']),
                       ),
                     ],
                   ),
                 ],
               ),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => _showRemoveAnnouncementDialog(announcement),
-                tooltip: 'Remove Announcement',
-              ),
-              isThreeLine: true,
             ),
           );
         },
       ),
-    );
-  }
-
-  void _showRemoveAnnouncementDialog(Map<String, dynamic> announcement) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Remove Announcement'),
-            content: Text(
-              'Are you sure you want to remove "${announcement['title']}"? This action cannot be undone.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _removeAnnouncement(announcement['id']);
-                },
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Remove'),
-              ),
-            ],
-          ),
     );
   }
 
@@ -1673,7 +2269,7 @@ class _AdminHomePageState extends State<AdminHomePage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Add New Announcement',
+              'Create New Announcement',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
@@ -1688,24 +2284,6 @@ class _AdminHomePageState extends State<AdminHomePage>
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter announcement title';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Content Field
-            TextFormField(
-              controller: _announcementContentController,
-              decoration: const InputDecoration(
-                labelText: 'Content',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
-              ),
-              maxLines: 5,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter announcement content';
                 }
                 return null;
               },
@@ -1728,15 +2306,40 @@ class _AdminHomePageState extends State<AdminHomePage>
                   }).toList(),
               onChanged: (String? newValue) {
                 setState(() {
-                  _selectedAnnouncementCategory = newValue ?? 'General';
+                  _selectedAnnouncementCategory = newValue!;
                 });
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Content Field
+            TextFormField(
+              controller: _announcementContentController,
+              decoration: const InputDecoration(
+                labelText: 'Content',
+                border: OutlineInputBorder(),
+                alignLabelWithHint: true,
+              ),
+              maxLines: 8,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter announcement content';
+                }
+                return null;
               },
             ),
             const SizedBox(height: 16),
 
             // Urgent Checkbox
             CheckboxListTile(
-              title: const Text('Mark as Urgent'),
+              title: const Text(
+                'Mark as Urgent',
+                style: TextStyle(fontSize: 16),
+              ),
+              subtitle: const Text(
+                'Urgent announcements are highlighted for students',
+                style: TextStyle(fontSize: 12),
+              ),
               value: _isAnnouncementUrgent,
               onChanged: (bool? value) {
                 setState(() {
@@ -1762,7 +2365,7 @@ class _AdminHomePageState extends State<AdminHomePage>
                     _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
-                          'Add Announcement',
+                          'Post Announcement',
                           style: TextStyle(fontSize: 16),
                         ),
               ),
@@ -1773,227 +2376,11 @@ class _AdminHomePageState extends State<AdminHomePage>
     );
   }
 
-  Future<void> _showAssignCourseDialog(Map<String, dynamic> course) async {
-    // Implementation of _showAssignCourseDialog method
-  }
-
-  // Method to add a new lecture row
-  void _addLectureRow() {
-    setState(() {
-      _lectureControllers.add({
-        'day': TextEditingController(text: _selectedDay),
-        'time': TextEditingController(),
-        'room': TextEditingController(),
-      });
-    });
-  }
-
-  // Method to remove a lecture row
-  void _removeLectureRow(int index) {
-    setState(() {
-      var controllers = _lectureControllers.removeAt(index);
-      controllers['time']?.dispose();
-      controllers['room']?.dispose();
-    });
-  }
-
-  // Dialog to manage lectures for an existing course
-  Future<void> _showManageLecturesDialog(Map<String, dynamic> course) async {
-    // Create temporary controllers for the dialog
-    List<Map<String, TextEditingController>> tempLectureControllers = [];
-
-    // Populate from existing lectures if any
-    final List<dynamic> existingLectures =
-        course['lectures'] as List<dynamic>? ?? [];
-    if (existingLectures.isNotEmpty) {
-      for (var lecture in existingLectures) {
-        tempLectureControllers.add({
-          'day': TextEditingController(text: lecture['day']),
-          'time': TextEditingController(text: lecture['time']),
-          'room': TextEditingController(text: lecture['room']),
-        });
-      }
-    } else {
-      // Add one empty row if no lectures exist
-      tempLectureControllers.add({
-        'day': TextEditingController(text: _selectedDay),
-        'time': TextEditingController(),
-        'room': TextEditingController(),
-      });
-    }
-
-    return showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Manage Lectures for ${course['code']}'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (int i = 0; i < tempLectureControllers.length; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Row(
-                          children: [
-                            // Day dropdown
-                            Expanded(
-                              flex: 3,
-                              child: DropdownButtonFormField<String>(
-                                decoration: const InputDecoration(
-                                  labelText: 'Day',
-                                  border: OutlineInputBorder(),
-                                ),
-                                value: tempLectureControllers[i]['day']!.text,
-                                items:
-                                    _weekDays.map((String day) {
-                                      return DropdownMenuItem<String>(
-                                        value: day,
-                                        child: Text(day),
-                                      );
-                                    }).toList(),
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    tempLectureControllers[i]['day']!.text =
-                                        newValue!;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            // Time field
-                            Expanded(
-                              flex: 3,
-                              child: TextFormField(
-                                controller: tempLectureControllers[i]['time'],
-                                decoration: const InputDecoration(
-                                  labelText: 'Time',
-                                  hintText: '9:00-10:30',
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            // Room field
-                            Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                controller: tempLectureControllers[i]['room'],
-                                decoration: const InputDecoration(
-                                  labelText: 'Room',
-                                  hintText: 'A101',
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                setState(() {
-                                  tempLectureControllers.removeAt(i);
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Lecture'),
-                      onPressed: () {
-                        setState(() {
-                          tempLectureControllers.add({
-                            'day': TextEditingController(text: _selectedDay),
-                            'time': TextEditingController(),
-                            'room': TextEditingController(),
-                          });
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    // Dispose temporary controllers
-                    for (var controllers in tempLectureControllers) {
-                      controllers['day']?.dispose();
-                      controllers['time']?.dispose();
-                      controllers['room']?.dispose();
-                    }
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    // Create lectures list from controllers
-                    final List<Map<String, dynamic>> updatedLectures = [];
-                    for (var controller in tempLectureControllers) {
-                      if ((controller['room']?.text.isNotEmpty ?? false) &&
-                          (controller['time']?.text.isNotEmpty ?? false)) {
-                        updatedLectures.add({
-                          'day': controller['day']?.text,
-                          'time': controller['time']?.text,
-                          'room': controller['room']?.text,
-                        });
-                      }
-                    }
-
-                    // Update course in Firestore
-                    try {
-                      await FirebaseFirestore.instance
-                          .collection('courses')
-                          .doc(course['id'].toString())
-                          .update({'lectures': updatedLectures});
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Lectures updated successfully!'),
-                        ),
-                      );
-
-                      // Refresh course list
-                      await _loadCourses();
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error updating lectures: $e')),
-                      );
-                    }
-
-                    // Dispose temporary controllers
-                    for (var controllers in tempLectureControllers) {
-                      controllers['day']?.dispose();
-                      controllers['time']?.dispose();
-                      controllers['room']?.dispose();
-                    }
-
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade900,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Save Lectures'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Build instructors tab
   Widget _buildInstructorsTab() {
     return DefaultTabController(
       length: 2,
       child: Column(
         children: [
-          // Inner tab bar for Instructors
           TabBar(
             labelColor: Colors.red.shade900,
             tabs: const [
@@ -2001,8 +2388,6 @@ class _AdminHomePageState extends State<AdminHomePage>
               Tab(text: 'Add Instructor'),
             ],
           ),
-
-          // Inner tab views
           Expanded(
             child: TabBarView(
               children: [
@@ -2019,7 +2404,6 @@ class _AdminHomePageState extends State<AdminHomePage>
     );
   }
 
-  // Build instructors list
   Widget _buildInstructorsList() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -2032,31 +2416,13 @@ class _AdminHomePageState extends State<AdminHomePage>
     return RefreshIndicator(
       onRefresh: _loadInstructors,
       child: ListView.builder(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(16),
         itemCount: _instructors.length,
         itemBuilder: (context, index) {
           final instructor = _instructors[index];
 
-          // Convert assignedCourses to a list
-          List<String> assignedCourseIds = [];
-          if (instructor['assignedCourses'] != null) {
-            assignedCourseIds = List<String>.from(
-              instructor['assignedCourses'],
-            );
-          }
-
-          // Get course names for display
-          List<String> courseNames = [];
-          for (var courseId in assignedCourseIds) {
-            final course = _courses.firstWhere(
-              (c) => c['id'].toString() == courseId,
-              orElse: () => {'code': 'Unknown'},
-            );
-            courseNames.add(course['code'] ?? 'Unknown');
-          }
-
           return Card(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            margin: const EdgeInsets.only(bottom: 16),
             child: ExpansionTile(
               leading: CircleAvatar(
                 backgroundColor: Colors.red.shade900,
@@ -2070,66 +2436,101 @@ class _AdminHomePageState extends State<AdminHomePage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('ID: ${instructor['id']}'),
-                  Text('Email: ${instructor['email']}'),
                   Text(
-                    'Academic Degree: ${instructor['academicDegree'] ?? 'N/A'}',
-                  ),
-                ],
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.book, color: Colors.blue),
-                    onPressed:
-                        () => _showAssignCoursesToInstructorDialog(instructor),
-                    tooltip: 'Assign Courses',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _showDeleteInstructorDialog(instructor),
-                    tooltip: 'Delete Instructor',
+                    'Degree: ${instructor['academicDegree'] ?? 'Not specified'}',
                   ),
                 ],
               ),
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
+                  padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Contact Information:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text('Phone: ${instructor['phone'] ?? 'N/A'}'),
-                      Text('Address: ${instructor['address'] ?? 'N/A'}'),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Assigned Courses:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      if (courseNames.isEmpty)
-                        const Text(
-                          'No courses assigned yet',
-                          style: TextStyle(fontStyle: FontStyle.italic),
-                        )
-                      else
-                        Wrap(
-                          spacing: 8,
-                          children:
-                              courseNames
-                                  .map(
-                                    (code) => Chip(
-                                      label: Text(code),
-                                      backgroundColor: Colors.blue.shade100,
-                                    ),
-                                  )
-                                  .toList(),
+                      ListTile(
+                        title: const Text('Contact Information'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Email: ${instructor['email'] ?? 'Not provided'}',
+                            ),
+                            Text(
+                              'Phone: ${instructor['phone'] ?? 'Not provided'}',
+                            ),
+                            Text(
+                              'Address: ${instructor['address'] ?? 'Not provided'}',
+                            ),
+                          ],
                         ),
+                      ),
+                      const Divider(),
+                      const ListTile(title: Text('Assigned Courses')),
+                      FutureBuilder<QuerySnapshot>(
+                        future:
+                            FirebaseFirestore.instance
+                                .collection('courses')
+                                .where(
+                                  'instructorId',
+                                  isEqualTo: instructor['id'].toString(),
+                                )
+                                .get(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          if (snapshot.hasError) {
+                            return Text('Error: ${snapshot.error}');
+                          }
+
+                          final courses = snapshot.data?.docs ?? [];
+
+                          if (courses.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Text(
+                                'No courses assigned to this instructor',
+                              ),
+                            );
+                          }
+
+                          return Column(
+                            children:
+                                courses.map((doc) {
+                                  final courseData =
+                                      doc.data() as Map<String, dynamic>;
+                                  return ListTile(
+                                    leading: const Icon(Icons.book),
+                                    title: Text(
+                                      courseData['name'] ?? 'Unknown course',
+                                    ),
+                                    subtitle: Text(
+                                      'Code: ${courseData['code'] ?? 'No code'}',
+                                    ),
+                                  );
+                                }).toList(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            icon: const Icon(Icons.delete, size: 18),
+                            label: const Text('Remove Instructor'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
+                            onPressed:
+                                () => _showDeleteInstructorDialog(instructor),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -2141,7 +2542,6 @@ class _AdminHomePageState extends State<AdminHomePage>
     );
   }
 
-  // Build add instructor form
   Widget _buildAddInstructorForm() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -2241,7 +2641,6 @@ class _AdminHomePageState extends State<AdminHomePage>
               initialCountryCode: 'EG',
               disableLengthCheck: false,
               onChanged: (phone) {
-                // Store the complete number in the controller when form is submitted
                 _instructorPhoneController.text = phone.completeNumber;
               },
               invalidNumberMessage: 'Invalid phone number',
@@ -2268,7 +2667,7 @@ class _AdminHomePageState extends State<AdminHomePage>
             TextFormField(
               controller: _instructorDegreeController,
               decoration: const InputDecoration(
-                labelText: 'Academic Degree (e.g., PhD, MSc)',
+                labelText: 'Academic Degree (e.g., Ph.D., Professor)',
                 border: OutlineInputBorder(),
               ),
               validator: (value) {
@@ -2280,17 +2679,26 @@ class _AdminHomePageState extends State<AdminHomePage>
             ),
             const SizedBox(height: 24),
 
-            // Assign Courses Section
-            if (_courses.isNotEmpty) ...[
+            const Text(
+              'Assign Courses',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+
+            // Course Selection
+            if (_courses.isEmpty)
               const Text(
-                'Assign Courses (Optional)',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ...List.generate(_courses.length, (index) {
-                final course = _courses[index];
+                'No courses available to assign',
+                style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey,
+                ),
+              )
+            else
+              ..._courses.map((course) {
                 return CheckboxListTile(
-                  title: Text('${course['code']} - ${course['name']}'),
+                  title: Text(course['name'] ?? 'Unknown course'),
+                  subtitle: Text('Code: ${course['code']}'),
                   value: _selectedCourseIds.contains(course['id'].toString()),
                   onChanged: (bool? value) {
                     setState(() {
@@ -2301,10 +2709,12 @@ class _AdminHomePageState extends State<AdminHomePage>
                       }
                     });
                   },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  activeColor: Colors.red.shade900,
                 );
-              }),
-              const SizedBox(height: 16),
-            ],
+              }).toList(),
+
+            const SizedBox(height: 24),
 
             // Submit Button
             SizedBox(
@@ -2331,91 +2741,6 @@ class _AdminHomePageState extends State<AdminHomePage>
     );
   }
 
-  // Show dialog to assign courses to an instructor
-  void _showAssignCoursesToInstructorDialog(Map<String, dynamic> instructor) {
-    // Convert instructor's assignedCourses to a list of strings if it exists
-    List<String> currentAssignedCourses = [];
-    if (instructor['assignedCourses'] != null) {
-      currentAssignedCourses = List<String>.from(instructor['assignedCourses']);
-    }
-
-    List<String> selectedCourses = List.from(currentAssignedCourses);
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Assign Courses to ${instructor['name']}'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Select courses to assign:'),
-                    const SizedBox(height: 16),
-                    ..._courses.map((course) {
-                      final courseId = course['id'].toString();
-                      final isAssigned = selectedCourses.contains(courseId);
-
-                      return CheckboxListTile(
-                        title: Text('${course['code']} - ${course['name']}'),
-                        value: isAssigned,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            if (value == true) {
-                              selectedCourses.add(courseId);
-                            } else {
-                              selectedCourses.remove(courseId);
-                            }
-                          });
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    try {
-                      // Update the instructor's assignedCourses
-                      await FirebaseFirestore.instance
-                          .collection('instructors')
-                          .doc(instructor['id'])
-                          .update({'assignedCourses': selectedCourses});
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Courses assigned successfully!'),
-                        ),
-                      );
-
-                      // Refresh instructor list
-                      await _loadInstructors();
-                      Navigator.pop(context);
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error assigning courses: $e')),
-                      );
-                    }
-                  },
-                  style: TextButton.styleFrom(foregroundColor: Colors.green),
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Show confirmation dialog for deleting an instructor
   void _showDeleteInstructorDialog(Map<String, dynamic> instructor) {
     showDialog(
       context: context,
@@ -2423,7 +2748,7 @@ class _AdminHomePageState extends State<AdminHomePage>
           (context) => AlertDialog(
             title: const Text('Delete Instructor'),
             content: Text(
-              'Are you sure you want to delete "${instructor['name']}"? This action cannot be undone.',
+              'Are you sure you want to delete "${instructor['name']}"?\n\nThis will permanently remove the instructor from the system. Any courses assigned to this instructor will need to be reassigned.',
             ),
             actions: [
               TextButton(
@@ -2443,26 +2768,22 @@ class _AdminHomePageState extends State<AdminHomePage>
     );
   }
 
-  // Delete an instructor
   Future<void> _deleteInstructor(String instructorId) async {
     try {
-      final firestoreService = FirestoreService();
-      await firestoreService.deleteInstructor(int.parse(instructorId));
+      await FirebaseFirestore.instance
+          .collection('instructors')
+          .doc(instructorId)
+          .delete();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Instructor deleted successfully!')),
-      );
+      _showSnackBar('Instructor deleted successfully!');
 
-      // Refresh the instructor list
+      // Reload instructors
       await _loadInstructors();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error deleting instructor: $e')));
+      _showSnackBar('Error deleting instructor: $e', isError: true);
     }
   }
 
-  // Add Instructor method
   Future<void> _addInstructor() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -2471,21 +2792,40 @@ class _AdminHomePageState extends State<AdminHomePage>
     });
 
     try {
-      final firestoreService = FirestoreService();
-      await firestoreService.addNewInstructor(
-        id: int.parse(_instructorIdController.text),
-        name: _instructorNameController.text,
-        email: _instructorEmailController.text,
-        password: _instructorPasswordController.text,
-        phone: _instructorPhoneController.text,
-        address: _instructorAddressController.text,
-        academicDegree: _instructorDegreeController.text,
-        assignedCourses: _selectedCourseIds,
-      );
+      final instructorId = int.parse(_instructorIdController.text);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Instructor added successfully!')),
-      );
+      // Create the instructor document
+      final instructor = {
+        'id': instructorId,
+        'name': _instructorNameController.text,
+        'email': _instructorEmailController.text,
+        'password': _instructorPasswordController.text,
+        'phone': _instructorPhoneController.text,
+        'address': _instructorAddressController.text,
+        'academicDegree': _instructorDegreeController.text,
+        'courses': _selectedCourseIds,
+      };
+
+      // Add to Firestore
+      await FirebaseFirestore.instance
+          .collection('instructors')
+          .doc(instructorId.toString())
+          .set(instructor);
+
+      // Update selected courses with this instructor
+      final batch = FirebaseFirestore.instance.batch();
+      for (var courseId in _selectedCourseIds) {
+        batch.update(
+          FirebaseFirestore.instance.collection('courses').doc(courseId),
+          {
+            'instructorId': instructorId.toString(),
+            'instructor': _instructorNameController.text,
+          },
+        );
+      }
+      await batch.commit();
+
+      _showSnackBar('Instructor added successfully!');
 
       // Clear the form
       _instructorIdController.clear();
@@ -2499,16 +2839,198 @@ class _AdminHomePageState extends State<AdminHomePage>
         _selectedCourseIds = [];
       });
 
-      // Refresh the instructor list
+      // Reload instructors and courses
       await _loadInstructors();
+      await _loadCourses();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error adding instructor: $e')));
+      _showSnackBar('Error adding instructor: $e', isError: true);
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  Widget _buildPendingGradesTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_pendingGrades.isEmpty) {
+      return const Center(
+        child: Text(
+          'No pending grades to review',
+          style: TextStyle(fontSize: 18),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadPendingGrades,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pending Grade Submissions',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Review and approve grade submissions from instructors',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _pendingGrades.length,
+              itemBuilder: (context, index) {
+                final grade = _pendingGrades[index];
+                final courseCode = grade['courseCode'] ?? 'Unknown Course';
+                final courseName = grade['courseName'] ?? '';
+                final instructorName =
+                    grade['instructorName'] ?? 'Unknown Instructor';
+                final submissionDate =
+                    grade['submissionDate'] is Timestamp
+                        ? (grade['submissionDate'] as Timestamp).toDate()
+                        : DateTime.now();
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ExpansionTile(
+                    title: Text('$courseCode - $courseName'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Submitted by: $instructorName'),
+                        Text(
+                          'Date: ${DateFormat('MMM d, yyyy - h:mm a').format(submissionDate)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Student Grades',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Divider(),
+                            if (grade['grades'] != null)
+                              ...(_buildGradesList(grade['grades'])),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.red,
+                                  ),
+                                  label: const Text('Reject'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                  ),
+                                  onPressed: () => _rejectGrade(grade['id']),
+                                ),
+                                const SizedBox(width: 16),
+                                ElevatedButton.icon(
+                                  icon: const Icon(Icons.check),
+                                  label: const Text('Approve'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: () => _approveGrade(grade['id']),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildGradesList(dynamic grades) {
+    if (grades is! Map) {
+      return [const Text('No grade data available')];
+    }
+
+    final widgets = <Widget>[];
+
+    // If grades is a map of student grades
+    if (grades['students'] != null && grades['students'] is List) {
+      final studentGrades = grades['students'] as List;
+
+      widgets.add(
+        DataTable(
+          columns: const [
+            DataColumn(label: Text('ID')),
+            DataColumn(label: Text('Name')),
+            DataColumn(label: Text('Midterm')),
+            DataColumn(label: Text('Final')),
+            DataColumn(label: Text('Assignments')),
+            DataColumn(label: Text('Total')),
+          ],
+          rows:
+              studentGrades.map<DataRow>((student) {
+                return DataRow(
+                  cells: [
+                    DataCell(Text(student['id']?.toString() ?? '')),
+                    DataCell(Text(student['name'] ?? '')),
+                    DataCell(Text(student['midterm']?.toString() ?? 'N/A')),
+                    DataCell(Text(student['final']?.toString() ?? 'N/A')),
+                    DataCell(Text(student['assignments']?.toString() ?? 'N/A')),
+                    DataCell(Text(student['total']?.toString() ?? 'N/A')),
+                  ],
+                );
+              }).toList(),
+        ),
+      );
+    } else {
+      // If it's a different format, just display the raw data
+      grades.forEach((key, value) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              children: [
+                Text(
+                  '$key: ',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(value?.toString() ?? 'N/A'),
+              ],
+            ),
+          ),
+        );
+      });
+    }
+
+    return widgets;
   }
 }

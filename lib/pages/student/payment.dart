@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'visa_payment.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PaymentPage extends StatefulWidget {
   const PaymentPage({super.key});
@@ -11,8 +12,24 @@ class PaymentPage extends StatefulWidget {
 class _PaymentPageState extends State<PaymentPage> {
   int numberOfCourses = 0;
   final double coursePrice = 5000.0;
+  String? _currentUserEmail;
 
   double get totalAmount => numberOfCourses * coursePrice;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentUserEmail();
+  }
+
+  Future<void> _getCurrentUserEmail() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      setState(() {
+        _currentUserEmail = currentUser.email;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -266,7 +283,11 @@ class _PaymentPageState extends State<PaymentPage> {
               () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => VisaPaymentPage(amount: totalAmount),
+                  builder:
+                      (context) => VisaPaymentPage(
+                        amount: totalAmount,
+                        studentEmail: _currentUserEmail,
+                      ),
                 ),
               ),
         ),

@@ -609,3 +609,46 @@ class StudentResult {
     );
   }
 }
+
+class Payment {
+  final int studentId;
+  final String studentName;
+  final double amountDue;
+  final double amountPaid;
+  final String status; // 'paid' or 'unpaid'
+  final DateTime lastUpdated;
+
+  Payment({
+    required this.studentId,
+    required this.studentName,
+    required this.amountDue,
+    required this.amountPaid,
+    required this.status,
+    required this.lastUpdated,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'studentId': studentId.toString(),
+      'studentName': studentName,
+      'amountDue': amountDue,
+      'amountPaid': amountPaid,
+      'status': status,
+      'lastUpdated': lastUpdated,
+    };
+  }
+
+  factory Payment.fromMap(Map<String, dynamic> map) {
+    return Payment(
+      studentId: int.tryParse(map['studentId']?.toString() ?? '0') ?? 0,
+      studentName: map['studentName'] ?? '',
+      amountDue: (map['amountDue'] as num?)?.toDouble() ?? 0.0,
+      amountPaid: (map['amountPaid'] as num?)?.toDouble() ?? 0.0,
+      status: map['status'] ?? 'unpaid',
+      lastUpdated:
+          map['lastUpdated'] != null
+              ? (map['lastUpdated'] as Timestamp).toDate()
+              : DateTime.now(),
+    );
+  }
+}

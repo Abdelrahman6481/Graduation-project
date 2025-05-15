@@ -67,12 +67,51 @@ class _ResultsPageState extends State<ResultsPage>
         return;
       }
 
-      //! الخطوة الأولى: هنحاول نجيب النتايج المنشورة من كوليكشن studentResults
-      final publishedResults = await _firestoreService
-          .getStudentAcademicResults(_studentId);
-
       //! هنعمل ماب عشان ننظم النتايج حسب الترم
       Map<String, List<Map<String, dynamic>>> resultsBySemester = {};
+
+      //! الخطوة الأولى: هنجيب النتايج اللي تم الموافقة عليها من الأدمن
+      final approvedGrades = await _firestoreService.getApprovedGrades(
+        _studentId,
+      );
+
+      if (approvedGrades.isNotEmpty) {
+        for (var grade in approvedGrades) {
+          //! هنعمل فورمات للترم مع السنة الدراسية
+          String semester = '${grade['semester']} ${grade['academicYear']}';
+          if (!resultsBySemester.containsKey(semester)) {
+            resultsBySemester[semester] = [];
+          }
+
+          //! هنجيب تفاصيل المادة
+          final courseId = int.tryParse(grade['courseId'].toString()) ?? 0;
+          String courseName = grade['courseName'] ?? 'Unknown Course';
+          String courseCode = grade['courseCode'] ?? '';
+
+          //! هنجيب درجات الطالب
+          final gradeData = grade['grades'] as Map<String, dynamic>? ?? {};
+          final letterGrade = gradeData['letterGrade'] ?? '-';
+          final totalGrade = (gradeData['total'] as num?)?.toDouble() ?? 0.0;
+
+          //! هنضيف النتيجة للماب بتاع النتايج
+          resultsBySemester[semester]!.add({
+            'course': courseName,
+            'code': courseCode,
+            'grade': letterGrade,
+            'points': _getGradePoints(letterGrade),
+            'credits': 3, // Default credits value if not specified
+            'status': _getGradePoints(letterGrade) >= 1.0 ? 'Passed' : 'Failed',
+            'totalGrade': totalGrade,
+            'publishedDate':
+                grade['submissionDate'], // Timestamp when submitted
+            'approvedByAdmin': true,
+          });
+        }
+      }
+
+      //! الخطوة الثانية: هنحاول نجيب النتايج المنشورة من كوليكشن studentResults
+      final publishedResults = await _firestoreService
+          .getStudentAcademicResults(_studentId);
 
       //! هنجهز النتايج المنشورة من كوليكشن studentResults
       if (publishedResults.isNotEmpty) {
@@ -93,6 +132,15 @@ class _ResultsPageState extends State<ResultsPage>
           int courseCredits =
               int.tryParse(result['courseCredits'].toString()) ?? 0;
 
+          //! نتحقق إذا كان هذا الكورس موجود بالفعل في النتائج من الخطوة الأولى
+          bool courseAlreadyExists = resultsBySemester[semester]!.any(
+            (item) =>
+                item['code'] == courseCode && item['course'] == courseName,
+          );
+
+          //! نتخطى هذا الكورس إذا كان موجود بالفعل (لأن الموافق عليه من الأدمن أحدث)
+          if (courseAlreadyExists) continue;
+
           //! هنحول نتيجة الفايرستور للفورمات المناسب
           resultsBySemester[semester]!.add({
             'course': courseName,
@@ -107,11 +155,12 @@ class _ResultsPageState extends State<ResultsPage>
             'totalGrade': (result['totalGrade'] as num?)?.toDouble() ?? 0.0,
             'publishedDate':
                 result['updatedAt'], // Store publish date for sorting if needed
+            'approvedByAdmin': false,
           });
         }
       }
 
-      //! الخطوة التانية: لو مفيش نتايج منشورة أو كباك أب، هنجرب نجيب من student.academicResults
+      //! الخطوة الثالثة: لو مفيش نتايج منشورة أو كباك أب، هنجرب نجيب من student.academicResults
       final academicResults = student.academicResults ?? [];
       if (resultsBySemester.isEmpty && academicResults.isNotEmpty) {
         //! هنجهز النتايج من student.academicResults
@@ -121,15 +170,28 @@ class _ResultsPageState extends State<ResultsPage>
             resultsBySemester[semester] = [];
           }
 
+          //! نتحقق إذا كان هذا الكورس موجود بالفعل في النتائج السابقة
+          String courseCode = result['courseCode'] ?? '';
+          String courseName = result['courseName'] ?? '';
+
+          bool courseAlreadyExists = resultsBySemester[semester]!.any(
+            (item) =>
+                item['code'] == courseCode && item['course'] == courseName,
+          );
+
+          //! نتخطى هذا الكورس إذا كان موجود بالفعل
+          if (courseAlreadyExists) continue;
+
           resultsBySemester[semester]!.add({
-            'course': result['courseName'],
-            'code': result['courseCode'],
+            'course': courseName,
+            'code': courseCode,
             'grade': result['grade'],
             'points': _getGradePoints(result['grade']),
             'credits': result['credits'],
             'status':
                 _getGradePoints(result['grade']) >= 1.0 ? 'Passed' : 'Failed',
             'totalGrade': result['totalGrade'],
+            'approvedByAdmin': false,
           });
         }
       }
@@ -485,116 +547,174 @@ class _ResultsPageState extends State<ResultsPage>
 
   //! دي الفنكشن اللي بتبني كارت النتيجة لكل مادة
   Widget _buildResultCard(Map<String, dynamic> result) {
-    //! هنشوف لو النتيجة دي اتنشرت حديثاً (خلال آخر 7 أيام)
-    bool isRecentlyPublished = false;
-    if (result['publishedDate'] != null) {
-      try {
-        if (result['publishedDate'] is Timestamp) {
-          final publishDate = (result['publishedDate'] as Timestamp).toDate();
-          final now = DateTime.now();
-          final difference = now.difference(publishDate);
-          isRecentlyPublished = difference.inDays < 7;
-        }
-      } catch (e) {
-        //! حصل إيرور في التحقق من تاريخ النشر
-        print('Error checking publish date: $e');
-      }
+    // Determine color based on grade
+    Color gradeColor;
+    switch (result['grade']) {
+      case 'A':
+        gradeColor = Colors.green;
+        break;
+      case 'B':
+        gradeColor = Colors.blue;
+        break;
+      case 'C':
+        gradeColor = Colors.orange;
+        break;
+      case 'D':
+        gradeColor = Colors.deepOrange;
+        break;
+      default:
+        gradeColor = Colors.red;
     }
 
+    final bool isApprovedByAdmin = result['approvedByAdmin'] == true;
+
     return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () {
-          _showResultDetails(result);
-        },
+      elevation: 3,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        child: Stack(
+        side: BorderSide(color: gradeColor.withOpacity(0.5), width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              result['course'],
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              result['code'],
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        result['course'] ?? 'Unknown Course',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        result['code'] ?? '',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
                         ),
                       ),
-                      _buildGradeChip(result['grade']),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildResultInfo(
-                        Icons.star_outline,
-                        'Points',
-                        result['points'].toString(),
-                      ),
-                      _buildResultInfo(
-                        Icons.book_outlined,
-                        'Credits',
-                        result['credits'].toString(),
-                      ),
-                      _buildResultInfo(
-                        Icons.check_circle_outline,
-                        'Status',
-                        result['status'],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (isRecentlyPublished)
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Container(
+                ),
+                Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    vertical: 8,
+                    horizontal: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
+                    color: gradeColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: gradeColor, width: 1),
+                  ),
+                  child: Text(
+                    result['grade'] ?? '-',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: gradeColor,
                     ),
                   ),
-                  child: const Text(
-                    'NEW',
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Credits: ${result['credits']}',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                Text(
+                  'Points: ${result['points']}',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        result['status'] == 'Passed'
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color:
+                          result['status'] == 'Passed'
+                              ? Colors.green
+                              : Colors.red,
+                    ),
+                  ),
+                  child: Text(
+                    result['status'] ?? 'Unknown',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
+                      fontSize: 12,
+                      color:
+                          result['status'] == 'Passed'
+                              ? Colors.green
+                              : Colors.red,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  'Total Grade: ${result['totalGrade']?.toStringAsFixed(1) ?? "0.0"}/100',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                if (isApprovedByAdmin)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 2,
+                        horizontal: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.verified,
+                            size: 14,
+                            color: Colors.blue.shade800,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Verified',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),

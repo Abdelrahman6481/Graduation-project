@@ -821,6 +821,30 @@ class FirestoreService {
     }
   }
 
+  // Get approved grades for a student
+  Future<List<Map<String, dynamic>>> getApprovedGrades(int studentId) async {
+    try {
+      final snapshot =
+          await _firestore
+              .collection('grades')
+              .where('studentId', isEqualTo: studentId.toString())
+              .where('status', isEqualTo: 'approved')
+              .get();
+
+      List<Map<String, dynamic>> approvedGrades = [];
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        approvedGrades.add({'id': doc.id, ...data});
+      }
+
+      return approvedGrades;
+    } catch (e) {
+      print('Error getting approved grades: $e');
+      rethrow;
+    }
+  }
+
   // Get students enrolled in a course
   Future<List<Map<String, dynamic>>> getStudentsInCourse(int courseId) async {
     try {
@@ -1170,6 +1194,94 @@ class FirestoreService {
       print('New instructor added successfully with ID: $id');
     } catch (e) {
       print('Error adding new instructor: $e');
+      rethrow;
+    }
+  }
+
+  // Payment Operations
+  Future<void> createPayment(Payment payment) async {
+    try {
+      // Use studentId as the document ID for easy lookup
+      final docId = _validateAndConvertId(payment.studentId);
+      await _firestore.collection('payments').doc(docId).set(payment.toMap());
+    } catch (e) {
+      print('Error creating payment record: $e');
+      rethrow;
+    }
+  }
+
+  Future<Payment?> getPayment(int studentId) async {
+    try {
+      final docId = _validateAndConvertId(studentId);
+      final doc = await _firestore.collection('payments').doc(docId).get();
+      return doc.exists ? Payment.fromMap(doc.data()!) : null;
+    } catch (e) {
+      print('Error getting payment: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Payment>> getAllPayments() async {
+    try {
+      final snapshot = await _firestore.collection('payments').get();
+      return snapshot.docs.map((doc) => Payment.fromMap(doc.data())).toList();
+    } catch (e) {
+      print('Error getting all payments: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updatePaymentStatus(
+    int studentId,
+    String status, {
+    double? amountPaid,
+  }) async {
+    try {
+      final docId = _validateAndConvertId(studentId);
+      final updateData = {
+        'status': status,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      };
+
+      if (amountPaid != null) {
+        updateData['amountPaid'] = amountPaid;
+      }
+
+      await _firestore.collection('payments').doc(docId).update(updateData);
+    } catch (e) {
+      print('Error updating payment status: $e');
+      rethrow;
+    }
+  }
+
+  // Initialize payment record for a student
+  Future<void> initializeStudentPayment(
+    int studentId,
+    String studentName,
+    double amountDue,
+  ) async {
+    try {
+      final docId = _validateAndConvertId(studentId);
+
+      // Check if payment record already exists
+      final doc = await _firestore.collection('payments').doc(docId).get();
+      if (doc.exists) {
+        return; // Record already exists, no need to initialize
+      }
+
+      // Create new payment record
+      final payment = Payment(
+        studentId: studentId,
+        studentName: studentName,
+        amountDue: amountDue,
+        amountPaid: 0.0,
+        status: 'unpaid',
+        lastUpdated: DateTime.now(),
+      );
+
+      await createPayment(payment);
+    } catch (e) {
+      print('Error initializing student payment: $e');
       rethrow;
     }
   }

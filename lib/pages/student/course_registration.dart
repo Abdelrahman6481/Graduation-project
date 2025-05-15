@@ -480,7 +480,76 @@ class _CourseRegistrationState extends State<CourseRegistration> {
         throw Exception("Student ID is not available");
       }
 
-      // For each selected course, create a registration record
+      // Check payment status first
+      final paymentDoc =
+          await FirebaseFirestore.instance
+              .collection('payments')
+              .doc(studentId)
+              .get();
+
+      if (!paymentDoc.exists) {
+        throw Exception(
+          "Payment record not found. Please contact administration.",
+        );
+      }
+
+      final paymentData = paymentDoc.data() as Map<String, dynamic>;
+      final paymentStatus = paymentData['status'] ?? 'unpaid';
+
+      if (paymentStatus != 'paid') {
+        // Payment not complete, show error and return
+        Navigator.of(context).pop(); // Close loading dialog
+
+        showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: Text('Payment Required'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.payment_outlined,
+                      color: Colors.red.shade900,
+                      size: 50,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Please pay your fees before registering for courses.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Current status: ${paymentStatus.toUpperCase()}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade900,
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/payment');
+                    },
+                    child: const Text('Go to Payment'),
+                  ),
+                ],
+              ),
+        );
+        return;
+      }
+
+      // Continue with course registration since payment is confirmed
       for (var course in _selectedCourses) {
         final courseId = course['id'];
 
