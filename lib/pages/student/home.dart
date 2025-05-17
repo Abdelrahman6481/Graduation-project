@@ -11,6 +11,7 @@ import 'results.dart';
 import '../services/online_services.dart';
 import '../services/announcements.dart';
 import '../support/support_help_desk.dart';
+import '../chat/chat_page.dart';
 import 'package:intl/intl.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:percent_indicator/percent_indicator.dart';
@@ -86,6 +87,7 @@ class _HomePageState extends State<HomePage> {
     const OnlineServicesPage(),
     HomeContent(studentData: _studentData),
     ProfilePage(studentData: _studentData),
+    const ChatPage(),
   ];
 
   @override
@@ -135,6 +137,7 @@ class _HomePageState extends State<HomePage> {
             _buildDrawerItem(Icons.school, 'Courses', context),
             _buildDrawerItem(Icons.calendar_today, 'Timetable', context),
             _buildDrawerItem(Icons.credit_card, 'Fees Payment', context),
+            _buildDrawerItem(Icons.chat, 'AI Assistant', context),
             _buildDrawerItem(Icons.logout, 'Logout', context),
           ],
         ),
@@ -153,6 +156,7 @@ class _HomePageState extends State<HomePage> {
           Icon(Icons.calendar_month_outlined, size: 30, color: Colors.white),
           Icon(Icons.home_outlined, size: 35, color: Colors.white),
           Icon(Icons.person_outline, size: 30, color: Colors.white),
+          Icon(Icons.chat_outlined, size: 30, color: Colors.white),
         ],
         onTap: (index) {
           setState(() {
@@ -187,6 +191,10 @@ class _HomePageState extends State<HomePage> {
                   ),
             ),
           );
+        } else if (title == 'AI Assistant') {
+          setState(() {
+            _selectedIndex = 4;
+          });
         } else if (title == 'Logout') {
           Navigator.pushReplacementNamed(context, '/login');
         }
