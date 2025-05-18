@@ -174,6 +174,7 @@ class Course {
   final String description;
   final bool isActive;
   final List<Lecture>? lectures;
+  final List<String>? prerequisites; // List of prerequisite course codes
 
   Course({
     required this.id,
@@ -184,6 +185,7 @@ class Course {
     required this.description,
     required this.isActive,
     this.lectures,
+    this.prerequisites,
   });
 
   Map<String, dynamic> toMap() {
@@ -196,6 +198,7 @@ class Course {
       'description': description,
       'isActive': isActive,
       'lectures': lectures?.map((lecture) => lecture.toMap()).toList(),
+      'prerequisites': prerequisites,
     };
   }
 
@@ -208,6 +211,11 @@ class Course {
               .toList();
     }
 
+    List<String>? prerequisitesList;
+    if (map['prerequisites'] != null) {
+      prerequisitesList = List<String>.from(map['prerequisites']);
+    }
+
     return Course(
       id: int.tryParse(map['id']?.toString() ?? '0') ?? 0,
       name: map['name'] ?? '',
@@ -217,6 +225,7 @@ class Course {
       description: map['description'] ?? '',
       isActive: map['isActive'] ?? false,
       lectures: lecturesList,
+      prerequisites: prerequisitesList,
     );
   }
 }

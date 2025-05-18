@@ -480,6 +480,78 @@ class _CourseRegistrationState extends State<CourseRegistration> {
         throw Exception("Student ID is not available");
       }
 
+      // Get student's GPA
+      final studentDoc =
+          await FirebaseFirestore.instance
+              .collection('students')
+              .doc(studentId)
+              .get();
+
+      if (!studentDoc.exists) {
+        throw Exception("Student record not found");
+      }
+
+      final studentData = studentDoc.data() as Map<String, dynamic>;
+      final studentGpa = (studentData['gpa'] as num?)?.toDouble() ?? 0.0;
+
+      // Check if student has exceeded their course limit based on GPA
+      final maxCourses = studentGpa >= 2.0 ? 6 : 4;
+
+      // Get current active registrations
+      final activeRegistrations =
+          await FirebaseFirestore.instance
+              .collection('courseRegistrations')
+              .where(
+                'studentId',
+                isEqualTo: int.tryParse(studentId) ?? studentId,
+              )
+              .where('status', isEqualTo: 'active')
+              .get();
+
+      final currentActiveCourses = activeRegistrations.docs.length;
+      final totalNewCourses = currentActiveCourses + _selectedCourses.length;
+
+      if (totalNewCourses > maxCourses) {
+        // Close loading dialog
+        Navigator.of(context).pop();
+
+        // Show error message
+        showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: Text('Course Limit Exceeded'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.red.shade900,
+                      size: 50,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Your GPA is ${studentGpa.toStringAsFixed(2)}.\n\n'
+                      'Students with GPA ${studentGpa >= 2.0 ? '≥ 2.0' : '< 2.0'} '
+                      'can register for a maximum of $maxCourses courses.\n\n'
+                      'You currently have $currentActiveCourses active courses and '
+                      'are trying to register ${_selectedCourses.length} more courses.\n\n'
+                      'Please reduce your selection to stay within the limit.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+        );
+        return;
+      }
+
       // Check payment status first
       final paymentDoc =
           await FirebaseFirestore.instance
@@ -549,7 +621,79 @@ class _CourseRegistrationState extends State<CourseRegistration> {
         return;
       }
 
-      // Continue with course registration since payment is confirmed
+      // Get student's completed courses
+      final completedCoursesSnapshot =
+          await FirebaseFirestore.instance
+              .collection('courseRegistrations')
+              .where(
+                'studentId',
+                isEqualTo: int.tryParse(studentId) ?? studentId,
+              )
+              .where('status', isEqualTo: 'completed')
+              .get();
+
+      final completedCourseIds =
+          completedCoursesSnapshot.docs
+              .map((doc) => doc.data()['courseId'].toString())
+              .toList();
+
+      // Check prerequisites for each selected course
+      for (var course in _selectedCourses) {
+        final courseId = course['id'];
+        final courseDoc =
+            await FirebaseFirestore.instance
+                .collection('courses')
+                .doc(courseId)
+                .get();
+
+        if (!courseDoc.exists) continue;
+
+        final courseData = courseDoc.data() as Map<String, dynamic>;
+        final prerequisites = List<String>.from(
+          courseData['prerequisites'] ?? [],
+        );
+
+        // Check if student has completed all prerequisites
+        for (var prerequisite in prerequisites) {
+          if (!completedCourseIds.contains(prerequisite)) {
+            // Close loading dialog
+            Navigator.of(context).pop();
+
+            // Show error message
+            showDialog(
+              context: context,
+              builder:
+                  (context) => AlertDialog(
+                    title: Text('Prerequisite Required'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.school_outlined,
+                          color: Colors.red.shade900,
+                          size: 50,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'You cannot register for ${course['code']} - ${course['name']} because you have not completed the prerequisite course: $prerequisite',
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+            );
+            return;
+          }
+        }
+      }
+
+      // Continue with course registration since all prerequisites are met
       for (var course in _selectedCourses) {
         final courseId = course['id'];
 

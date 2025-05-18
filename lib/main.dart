@@ -9,17 +9,17 @@ import 'pages/auth/login.dart';
 import 'pages/auth/prelogin.dart';
 import 'pages/student/home.dart';
 import 'pages/auth/instructor_login.dart';
-// استيراد InstructorHomePage تم إزالته لأنه غير مستخدم
+//! استيراد InstructorHomePage تم إزالته لأنه غير مستخدم
 import 'pages/admin/admin_home.dart';
 import 'services/firestore_service.dart';
 
-// These functions are kept for reference but not called on startup anymore
+//! These functions are kept for reference but not called on startup anymore
 Future<void> createNewAdmin() async {
   try {
-    // Generate a unique admin ID - you can change this
+    //! Generate a unique admin ID - you can change this
     final String adminId = 'admin_${DateTime.now().millisecondsSinceEpoch}';
 
-    // Create admin directly in Firestore
+    //! Create admin directly in Firestore
     await FirebaseFirestore.instance.collection('admins').doc(adminId).set({
       'id': adminId,
       'name': 'New Direct Admin',
@@ -30,7 +30,7 @@ Future<void> createNewAdmin() async {
       'lastLogin': FieldValue.serverTimestamp(),
     });
 
-    // استخدام طريقة آمنة للتسجيل تعمل فقط في وضع التصحيح
+    //! استخدام طريقة آمنة للتسجيل تعمل فقط في وضع التصحيح
     if (kDebugMode) {
       debugPrint('NEW ADMIN CREATED: $adminId');
       debugPrint('Email: directadmin@example.com');
@@ -45,7 +45,7 @@ Future<void> createNewAdmin() async {
 
 Future<void> testFirebaseConnection() async {
   try {
-    // Log a test event to Firebase Analytics
+    //! Log a test event to Firebase Analytics
     await FirebaseAnalytics.instance.logEvent(
       name: 'app_opened',
       parameters: {'test_time': DateTime.now().toString()},
@@ -89,17 +89,17 @@ Future<void> addSpecificStudent() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
+  //! Initialize Firebase
   await Firebase.initializeApp();
 
-  // Only test the Firebase connection
+  //! Only test the Firebase connection
   await testFirebaseConnection();
 
-  // The following functions are removed from auto-execution on startup
-  // await addSpecificStudent();
-  // await createNewAdmin();
+  //! The following functions are removed from auto-execution on startup
+  //! await addSpecificStudent();
+  //! await createNewAdmin();
 
-  // إخفاء شريط الحالة (Status Bar)
+  // !إخفاء شريط الحالة (Status Bar)
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent, // ? جعل شريط الحالة شفاف
@@ -113,7 +113,7 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // Create an instance of FirebaseAnalytics
+  //! Create an instance of FirebaseAnalytics
   static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   static FirebaseAnalyticsObserver observer = FirebaseAnalyticsObserver(
     analytics: analytics,
@@ -129,7 +129,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red.shade900),
         useMaterial3: true,
       ),
-      // Define routes
+      //! Define routes
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
@@ -143,10 +143,10 @@ class MyApp extends StatelessWidget {
             ),
         '/admin-home':
             (context) => const AdminHomePage(admin: {'name': 'Admin'}),
-        // Add other routes as needed
+        //! Add other routes as needed
       },
-      // Remove the home property since we're using initialRoute
-      // home: Stack(...)
+      //! Remove the home property since we're using initialRoute
+      //! home: Stack(...)
     );
   }
 }

@@ -100,6 +100,9 @@ class _AdminHomePageState extends State<AdminHomePage>
   // Add pending grades variable
   List<Map<String, dynamic>> _pendingGrades = [];
 
+  // Add prerequisites variable
+  List<String> _selectedPrerequisites = [];
+
   @override
   void initState() {
     super.initState();
@@ -500,10 +503,11 @@ class _AdminHomePageState extends State<AdminHomePage>
         'code': courseCode,
         'credits': courseCredits,
         'instructor': instructorName,
-        'instructorId': instructorId, // Store the instructor ID for reference
+        'instructorId': instructorId,
         'description': description,
         'isActive': true,
         'lectures': lectures,
+        'prerequisites': _selectedPrerequisites,
       };
 
       // Add to Firestore
@@ -523,27 +527,9 @@ class _AdminHomePageState extends State<AdminHomePage>
       _courseCreditsController.clear();
       _courseInstructorController.clear();
       _courseDescriptionController.clear();
-
-      // Reset instructor selection if instructors are available
       setState(() {
-        if (_instructors.isNotEmpty) {
-          _selectedInstructorId = _instructors[0]['id'].toString();
-          _courseInstructorController.text = _instructors[0]['name'] ?? '';
-        } else {
-          _selectedInstructorId = '';
-        }
+        _selectedPrerequisites.clear();
       });
-
-      // Clear lecture controllers and add one empty row
-      for (var controllers in _lectureControllers) {
-        controllers['time']?.dispose();
-        controllers['room']?.dispose();
-      }
-      _lectureControllers.clear();
-      _addLectureRow();
-
-      // Refresh the course list
-      await _loadCourses();
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -1367,6 +1353,94 @@ class _AdminHomePageState extends State<AdminHomePage>
                   return 'Credits must be a number';
                 }
                 return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Prerequisites Field
+            StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance.collection('courses').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const CircularProgressIndicator();
+                }
+
+                final courses = snapshot.data!.docs;
+                final List<Map<String, dynamic>> courseOptions =
+                    courses
+                        .map(
+                          (doc) => {
+                            'id': doc.id,
+                            'code': doc['code'] ?? '',
+                            'name': doc['name'] ?? '',
+                          },
+                        )
+                        .toList();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Prerequisites',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          hint: const Text('Select Prerequisites'),
+                          value:
+                              _selectedPrerequisites.isNotEmpty
+                                  ? _selectedPrerequisites.first
+                                  : null,
+                          items:
+                              courseOptions.map((course) {
+                                return DropdownMenuItem<String>(
+                                  value: course['code'],
+                                  child: Text(
+                                    '${course['code']} - ${course['name']}',
+                                  ),
+                                );
+                              }).toList(),
+                          onChanged: (String? value) {
+                            if (value != null) {
+                              setState(() {
+                                if (!_selectedPrerequisites.contains(value)) {
+                                  _selectedPrerequisites.add(value);
+                                }
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children:
+                          _selectedPrerequisites.map((prerequisite) {
+                            return Chip(
+                              label: Text(prerequisite),
+                              onDeleted: () {
+                                setState(() {
+                                  _selectedPrerequisites.remove(prerequisite);
+                                });
+                              },
+                            );
+                          }).toList(),
+                    ),
+                  ],
+                );
               },
             ),
             const SizedBox(height: 16),
