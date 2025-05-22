@@ -58,16 +58,16 @@ class _ChatPageState extends State<ChatPage> {
           'CIC Assistant',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF1E3A8A),
+        backgroundColor: Colors.red.shade900,
         elevation: 0,
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF1E3A8A), Colors.white],
-            stops: [0.0, 0.3],
+            colors: [Colors.red.shade900, Colors.white],
+            stops: const [0.0, 0.3],
           ),
         ),
         child: Column(
@@ -90,11 +90,12 @@ class _ChatPageState extends State<ChatPage> {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: isUser ? const Color(0xFF1E3A8A) : Colors.white,
+                        color:
+                            isUser ? Colors.red.shade900 : Colors.red.shade50,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.red.withOpacity(0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -109,7 +110,8 @@ class _ChatPageState extends State<ChatPage> {
                           Text(
                             isUser ? 'You' : 'CIC Assistant',
                             style: TextStyle(
-                              color: isUser ? Colors.white70 : Colors.grey[600],
+                              color:
+                                  isUser ? Colors.white70 : Colors.red.shade900,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
@@ -118,7 +120,8 @@ class _ChatPageState extends State<ChatPage> {
                           Text(
                             message['content']!,
                             style: TextStyle(
-                              color: isUser ? Colors.white : Colors.black87,
+                              color:
+                                  isUser ? Colors.white : Colors.red.shade900,
                               fontSize: 16,
                             ),
                           ),
@@ -134,20 +137,23 @@ class _ChatPageState extends State<ChatPage> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const SizedBox(
+                    SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          Color(0xFF1E3A8A),
+                          Colors.red.shade900,
                         ),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Text(
                       'Assistant is typing...',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      style: TextStyle(
+                        color: Colors.red.shade900,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -158,7 +164,7 @@ class _ChatPageState extends State<ChatPage> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.red.withOpacity(0.1),
                     blurRadius: 4,
                     offset: const Offset(0, -2),
                   ),
@@ -171,12 +177,15 @@ class _ChatPageState extends State<ChatPage> {
                       controller: _messageController,
                       decoration: InputDecoration(
                         hintText: 'Type your message...',
+                        hintStyle: TextStyle(
+                          color: const Color.fromARGB(255, 8, 8, 8),
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(25),
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: Colors.grey[100],
+                        fillColor: const Color.fromARGB(255, 255, 255, 255),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 10,
@@ -190,7 +199,7 @@ class _ChatPageState extends State<ChatPage> {
                   const SizedBox(width: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E3A8A),
+                      color: Colors.red.shade900,
                       borderRadius: BorderRadius.circular(25),
                     ),
                     child: IconButton(
