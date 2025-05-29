@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 // استيراد firestore_models.dart تم إزالته لأنه غير مستخدم
 import 'admin_support_tickets.dart';
 import 'admin_finance.dart';
+import 'admin_exam_schedule.dart';
 
 class AdminHomePage extends StatefulWidget {
   final Map<String, dynamic> admin;
@@ -106,7 +107,7 @@ class _AdminHomePageState extends State<AdminHomePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 9, vsync: this);
+    _tabController = TabController(length: 10, vsync: this);
     _loadStudents();
     _loadCourses();
     _loadAnnouncements();
@@ -701,6 +702,7 @@ class _AdminHomePageState extends State<AdminHomePage>
             Tab(text: 'Support Tickets', icon: Icon(Icons.support)),
             Tab(text: 'Finance', icon: Icon(Icons.payments_outlined)),
             Tab(text: 'Pending Grades', icon: Icon(Icons.pending_actions)),
+            Tab(text: 'Exam Schedule', icon: Icon(Icons.calendar_today)),
           ],
         ),
       ),
@@ -733,6 +735,9 @@ class _AdminHomePageState extends State<AdminHomePage>
 
           // Tab 9: Pending Grades
           _buildPendingGradesTab(),
+
+          // Tab 10: Exam Schedule
+          const AdminExamSchedulePage(),
         ],
       ),
     );

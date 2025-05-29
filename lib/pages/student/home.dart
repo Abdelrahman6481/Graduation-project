@@ -1,4 +1,4 @@
-import 'dashboard.dart';
+import 'student_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -83,7 +83,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<Widget> get _pages => [
-    const DashboardPage(),
+    const StudentMenuPage(),
     const OnlineServicesPage(),
     HomeContent(studentData: _studentData),
     ProfilePage(studentData: _studentData),
