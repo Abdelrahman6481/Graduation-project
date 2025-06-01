@@ -37,6 +37,7 @@ class _AdminHomePageState extends State<AdminHomePage>
   List<Map<String, dynamic>> _courses = [];
   List<Map<String, dynamic>> _announcements = [];
   List<Map<String, dynamic>> _instructors = [];
+  List<Map<String, dynamic>> _admins = []; // Add this line
   bool _isLoading = false;
 
   // Form controllers for adding a new student
@@ -104,10 +105,20 @@ class _AdminHomePageState extends State<AdminHomePage>
   // Add prerequisites variable
   List<String> _selectedPrerequisites = [];
 
+  // Add admin-related controllers
+  final _adminNameController = TextEditingController();
+  final _adminEmailController = TextEditingController();
+  final _adminPasswordController = TextEditingController();
+  final _adminPhoneController = TextEditingController();
+  final _adminAddressController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 10, vsync: this);
+    _tabController = TabController(
+      length: 11,
+      vsync: this,
+    ); // Update length to 11
     _loadStudents();
     _loadCourses();
     _loadAnnouncements();
@@ -121,8 +132,130 @@ class _AdminHomePageState extends State<AdminHomePage>
       }
     });
     _loadPendingGrades();
+    _loadAdmins(); // Add this line
     // Add an initial empty lecture row
     _addLectureRow();
+  }
+
+  // Add function to load admins
+  Future<void> _loadAdmins() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('admins').get();
+      final List<Map<String, dynamic>> loadedAdmins = [];
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        loadedAdmins.add({'id': doc.id, ...data});
+      }
+
+      setState(() {
+        _admins = loadedAdmins;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        _showSnackBar('Error loading admins: $e', isError: true);
+      }
+    }
+  }
+
+  // Add function to add new admin
+  Future<void> _addAdmin() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Check if email already exists
+      final emailQuery =
+          await FirebaseFirestore.instance
+              .collection('admins')
+              .where('email', isEqualTo: _adminEmailController.text)
+              .get();
+
+      if (emailQuery.docs.isNotEmpty) {
+        _showSnackBar('Email already exists', isError: true);
+        return;
+      }
+
+      // Create new admin document
+      final adminRef = FirebaseFirestore.instance.collection('admins').doc();
+      await adminRef.set({
+        'id': adminRef.id,
+        'name': _adminNameController.text,
+        'email': _adminEmailController.text,
+        'password': _adminPasswordController.text,
+        'phone': _adminPhoneController.text,
+        'address': _adminAddressController.text,
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
+
+      _showSnackBar('Admin added successfully!');
+
+      // Clear form
+      _adminNameController.clear();
+      _adminEmailController.clear();
+      _adminPasswordController.clear();
+      _adminPhoneController.clear();
+      _adminAddressController.clear();
+
+      // Reload admins
+      await _loadAdmins();
+    } catch (e) {
+      _showSnackBar('Error adding admin: $e', isError: true);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _idController.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _levelController.dispose();
+    _creditsController.dispose();
+    _collegeNameController.dispose();
+    _majorController.dispose();
+    _gpaController.dispose();
+    _instructorIdController.dispose();
+    _instructorNameController.dispose();
+    _instructorEmailController.dispose();
+    _instructorPasswordController.dispose();
+    _instructorPhoneController.dispose();
+    _instructorAddressController.dispose();
+    _instructorDegreeController.dispose();
+    _courseIdController.dispose();
+    _courseNameController.dispose();
+    _courseCodeController.dispose();
+    _courseCreditsController.dispose();
+    _courseInstructorController.dispose();
+    _courseDescriptionController.dispose();
+    _announcementTitleController.dispose();
+    _announcementContentController.dispose();
+    _announcementCategoryController.dispose();
+    _adminNameController.dispose(); // Add this line
+    _adminEmailController.dispose(); // Add this line
+    _adminPasswordController.dispose(); // Add this line
+    _adminPhoneController.dispose(); // Add this line
+    _adminAddressController.dispose(); // Add this line
+    super.dispose();
   }
 
   // Add a function to load pending grades
@@ -187,52 +320,6 @@ class _AdminHomePageState extends State<AdminHomePage>
     } catch (e) {
       _showSnackBar('Error rejecting grade: $e', isError: true);
     }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _idController.dispose();
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
-    _levelController.dispose();
-    _creditsController.dispose();
-    _collegeNameController.dispose();
-    _majorController.dispose();
-    _gpaController.dispose();
-
-    // Dispose instructor controllers
-    _instructorIdController.dispose();
-    _instructorNameController.dispose();
-    _instructorEmailController.dispose();
-    _instructorPasswordController.dispose();
-    _instructorPhoneController.dispose();
-    _instructorAddressController.dispose();
-    _instructorDegreeController.dispose();
-
-    // Dispose course controllers
-    _courseIdController.dispose();
-    _courseNameController.dispose();
-    _courseCodeController.dispose();
-    _courseCreditsController.dispose();
-    _courseInstructorController.dispose();
-    _courseDescriptionController.dispose();
-
-    // Dispose announcement controllers
-    _announcementTitleController.dispose();
-    _announcementContentController.dispose();
-    _announcementCategoryController.dispose();
-
-    // Dispose lecture controllers
-    for (var controllers in _lectureControllers) {
-      controllers['time']?.dispose();
-      controllers['room']?.dispose();
-    }
-
-    super.dispose();
   }
 
   Future<void> _loadStudents() async {
@@ -703,6 +790,7 @@ class _AdminHomePageState extends State<AdminHomePage>
             Tab(text: 'Finance', icon: Icon(Icons.payments_outlined)),
             Tab(text: 'Pending Grades', icon: Icon(Icons.pending_actions)),
             Tab(text: 'Exam Schedule', icon: Icon(Icons.calendar_today)),
+            Tab(text: 'Admins', icon: Icon(Icons.group)),
           ],
         ),
       ),
@@ -738,6 +826,9 @@ class _AdminHomePageState extends State<AdminHomePage>
 
           // Tab 10: Exam Schedule
           const AdminExamSchedulePage(),
+
+          // Tab 11: Admins
+          _buildAdminsTab(),
         ],
       ),
     );
@@ -3111,5 +3202,206 @@ class _AdminHomePageState extends State<AdminHomePage>
     }
 
     return widgets;
+  }
+
+  Widget _buildAdminsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Add New Admin Form
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Add New Admin',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Admin Name Field
+                    TextFormField(
+                      controller: _adminNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Admin Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter admin name';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Admin Email Field
+                    TextFormField(
+                      controller: _adminEmailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Admin Email',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter admin email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Please enter a valid email';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Admin Password Field
+                    TextFormField(
+                      controller: _adminPasswordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Admin Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter admin password';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Admin Phone Field with Country Code
+                    IntlPhoneField(
+                      decoration: const InputDecoration(
+                        labelText: 'Admin Phone Number',
+                        border: OutlineInputBorder(),
+                      ),
+                      initialCountryCode: 'EG',
+                      disableLengthCheck: false,
+                      onChanged: (phone) {
+                        _adminPhoneController.text = phone.completeNumber;
+                      },
+                      invalidNumberMessage: 'Invalid phone number',
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Admin Address Field
+                    TextFormField(
+                      controller: _adminAddressController,
+                      decoration: const InputDecoration(
+                        labelText: 'Admin Address',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter admin address';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Submit Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _addAdmin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade900,
+                          foregroundColor: Colors.white,
+                        ),
+                        child:
+                            _isLoading
+                                ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                                : const Text(
+                                  'Add Admin',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          // Existing Admins List
+          const Text(
+            'Existing Admins',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator())
+          else if (_admins.isEmpty)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('No admins found'),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _admins.length,
+              itemBuilder: (context, index) {
+                final admin = _admins[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Colors.red,
+                      child: Icon(
+                        Icons.admin_panel_settings,
+                        color: Colors.white,
+                      ),
+                    ),
+                    title: Text(admin['name'] ?? 'Unnamed Admin'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Email: ${admin['email'] ?? 'No email'}'),
+                        Text('Phone: ${admin['phone'] ?? 'No phone'}'),
+                        Text('Address: ${admin['address'] ?? 'No address'}'),
+                        if (admin['lastLogin'] != null)
+                          Text(
+                            'Last Login: ${DateFormat('yyyy-MM-dd HH:mm').format((admin['lastLogin'] as Timestamp).toDate())}',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                    isThreeLine: true,
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
   }
 }
